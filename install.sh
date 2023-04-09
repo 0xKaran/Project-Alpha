@@ -69,6 +69,22 @@ function scripts_download(){
         fi
     }
     anti-burl
+
+    # TestSSL
+    function testssl(){
+        #Anti-burl
+        if [ -e testssl/testssl.sh ]; then
+            echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} testssl.sh already exists in the ./testssl directory";
+        else
+            echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} testssl.sh not installed. So installing in $(pwd)/testssl";
+            git clone --quiet --depth 1 https://github.com/drwetter/testssl.sh.git
+            mv testssl.sh testssl
+            chmod +x testssl/testssl.sh
+            sudo apt-get install -y bsdmainutils
+            echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} testssl.sh installed in $(pwd)/testssl";
+        fi
+    }
+    testssl
 }
 
 function goinstall(){ 

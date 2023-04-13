@@ -1,17 +1,10 @@
 #!/bin/bash
 
-# Usage: ./alpha-recon.sh reoft.com reoft
+# Usage: ./1-reconRanger.sh reoft.com reoft
 # Put reoft.com either in script folder or result folder otherwise it'll not save
 # Arg 1: DomainList
 # Arg 2: Folder Name
 # scp recon.sh root@158.220.96.161:/root/readyalpha/scripts
-
-# To-Do
-	# Integrate Amass
-	# Proxy server for portscan, endpoint_collection
-	# Before closing or exitin script, it should print all the yellow & red highlights in the end altogether
-	# Send Webhook notification on red highlights
-	# Subdomain fuzzing
 
 # Initial
 	printf "\033c"
@@ -23,8 +16,15 @@
 	domain_list=$1
 	folder_name=$2
 	mkdir -p ../result;
-	mkdir -p ../result/$2;
-	dir=../result/$2;
+
+	if [ -d "../result/$2" ]; then
+	    echo -e "${GREEN}[$(date "+%H:%M:%S")] ${ENDCOLOR}$2 directory already exists"
+	    mkdir -p ../result/$2;
+	else
+		echo -e "${GREEN}[$(date "+%H:%M:%S")] ${ENDCOLOR}$2 Directory with name $2 created in result folder"
+	    mkdir -p ../result/$2;
+	fi
+	dir=./../result/$2;
 	
 	if [ "$#" -ne 2 ]; then
 	  echo -e "${RED}Script requires two arguments:
@@ -61,6 +61,8 @@
 		echo -e "             &&&&&&&&&&          &&&&&                                    "
 		echo -e "               &&&&&&&&&&&&&&&&&&&&(                                      "
 		echo -e "                  &&&&&&&&&&&&&&                                          "
+		echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+		echo -e "${GREEN}Features:${ENDCOLOR} Subdomain Enum | Robots.txt | URLs | JS | Titles";
 		echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Supply even single domain in a file"
 		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Keep updating Nuclei templates manually"
@@ -166,6 +168,7 @@ function tools_check(){
 	#nuclei_templates_move
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";	
 }
+tools_check
 
 function subdomain_enumeration(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Recon Started"
@@ -198,39 +201,42 @@ function subdomain_enumeration(){
 }
 
 function robots_txt(){
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting domains which contain \"/robots.txt\"";
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting domains which contain ${GREEN}robots.txt${ENDCOLOR}";
 	cat $dir/live-domains.txt | httpx -silent | sed 's#/$##;s#$#/robots.txt#' | anti-burl | awk '{print $4}' | anew -q $dir/robots.txt;
 	var=$(cat $dir/live-domains.txt | wc -l); var2=$(cat $dir/robots.txt | wc -l)
-	echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var2 out of $var domains have 'robots.txt' file & saved as \"$dir/robots.txt\"${ENDCOLOR}";
+	echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var2 out of $var domains have 'robots.txt' file & saved as $2/robots.txt${ENDCOLOR}";
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 }
+robots_txt
 
 function endpoint_collection(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Crawling domains"
 	cat $domain_list | httpx -silent | hakrawler -insecure -subs -t 20 -u >> $dir/crawled-urls.txt;
-	var=$(cat $dir/crawled-urls.txt | wc -l); echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} $var endpoints found and saved to > 'crawled-urls.txt'";
+	var=$(cat $dir/crawled-urls.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var endpoints found and saved as ${GREEN}crawled-urls.txt${ENDCOLOR}";
 
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting Wayback data";
 	cat $dir/live-domains.txt | waybackurls >> $dir/waybackdata.txt;
-	var=$(cat $dir/waybackdata.txt | wc -l); echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} $var endpoints found and saved to > 'waybackdata.txt'";
+	var=$(cat $dir/waybackdata.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var endpoints found and saved as ${GREEN}waybackdata.txt${ENDCOLOR}";
 
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting Gau data"
 	cat $dir/live-domains.txt | gau >> $dir/gau.txt;
-	var=$(cat $dir/gau.txt | wc -l); echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} $var endpoints found and saved to > 'gau.txt'";
+	var=$(cat $dir/gau.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var endpoints found and saved as ${GREEN}gau.txt${ENDCOLOR}";
 
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Merging waybackurls & gau data for further crawling"
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Also checking live endpoints"
 	cat $dir/waybackdata.txt $dir/gau.txt | sort -u | anti-burl | awk '{print $4}' | anew -q $dir/waybackurls-gau-combined.txt;
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Merged URLs with 200 Ok --> Now deleting waybackurls & gau files"
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Merged live URLs as ${GREEN}waybackurls-gau-combined.txt${ENDCOLOR}--> Now deleting waybackurls & gau files"
 	rm $dir/waybackdata.txt $dir/gau.txt;
+	echo -e "${GREEN}[$(date "+%H:%M:%S")] waybackdata.txt${ENDCOLOR} & ${GREEN}gau.txt${ENDCOLOR} deleted"
 
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Crawling archived urls"
 	cat $dir/waybackurls-gau-combined.txt | hakrawler -insecure -subs -t 20 -u >> $dir/crawled-archived-urls.txt;
-	var=$(cat $dir/crawled-archived-urls.txt | wc -l); echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} $var endpoints found and saved to > 'crawled-archived-urls'";
+	var=$(cat $dir/crawled-archived-urls.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var endpoints found and saved as ${GREEN}crawled-archived-urls${ENDCOLOR}";
 
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Combining 200 OK URLs from waybackurls, gau, crawled domains & crawled archived urls txt files";
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Combining live URLs from waybackurls, gau, crawled domains & crawled archived urls text files";
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} This may take a bit longer";
 	cat $dir/crawled-urls.txt $dir/waybackurls-gau-combined.txt $dir/crawled-archived-urls.txt | anti-burl | awk '{print $4}' | anew -q $dir/all-endpoints.txt;
-	var=$(cat $dir/all-endpoints.txt | wc -l); echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} $var endpoints found and saved to > 'all-endpoints.txt'";
+	var=$(cat $dir/all-endpoints.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var endpoints found and saved as ${GREEN}all-endpoints.txt${ENDCOLOR}";
 
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Deleting waybackdata-gau-combined.txt, crawled-urls.txt & crawled-archived-urls.txt";
 	rm $dir/crawled-urls.txt $dir/waybackurls-gau-combined.txt $dir/crawled-archived-urls.txt;
@@ -238,47 +244,10 @@ function endpoint_collection(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Saving clean endpoints (^http.*)";
 	cat $dir/all-endpoints.txt | grep -E "^(http|https)://.*" | anew -q $dir/endpoints.txt; rm $dir/all-endpoints.txt;
 
-	var=$(cat $dir/endpoints.txt | wc -l); echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} $var unique endpoints with (^http.*) found & saved as \"$dir/endpoints.txt\"";
+	var=$(cat $dir/endpoints.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var unique endpoints with (^http.*) found & saved as ${GREEN} $2/endpoints.txt${ENDCOLOR}";
 
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	# Final: $dir/endpoints.txt
-}
-
-function exposedfiles(){
-	echo -e "${GREEN}\n[$(date "+%H:%M:%S")]${ENDCOLOR} Hunting for exposed files/folders"
-	
-	mkdir -p $dir/exposedfiles
-	wordlist="./discoverylist.txt"
-	for domain in $(<$dir/live-domains.txt); do (ffuf -w $wordlist -u $domain/FUZZ -mc 200,201,202,203,303 -ignore-body -p 0.2 -of md -o $dir/exposedfiles/1-domain-exposed-files.txt >> /dev/null;
-	cat $dir/exposedfiles/1-domain-exposed-files.txt | anew -q $dir/exposedfiles/mixed-exposedfiles.txt); done;
-	cat $dir/exposedfiles/mixed-exposedfiles.txt | grep -E "(http|https)://.*" | awk '{print $4}' | grep -E "^(http|https)://.*" | anew -q $dir/exposedfiles/all-exposedfiles.txt;
-	rm $dir/exposedfiles/1-domain-exposed-files.txt $dir/exposedfiles/mixed-exposedfiles.txt;
-	var=$(cat $dir/exposedfiles/all-exposedfiles.txt | wc -l)
-
-	echo -e "${RED}[$(date "+%H:%M:%S")] $var exposed files/folders found & saved as \"$dir/exposedfiles/all-exposedfiles.txt\"${ENDCOLOR}"
-	echo -e "${RED}[$(date "+%H:%M:%S")] $var exposed files/folders found & saved as \"$dir/exposedfiles/all-exposedfiles.txt\"${ENDCOLOR}"
-	echo -e "${RED}[$(date "+%H:%M:%S")] $var exposed files/folders found & saved as \"$dir/exposedfiles/all-exposedfiles.txt\"${ENDCOLOR}"
-	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
-}
-
-function domain_titles(){
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting domains + subdomains title"
-	cat $dir/live-domains.txt | httpx -silent | ./get-title | anew -q $dir/domain-titles.txt;
-	var=$(cat $dir/domain-titles.txt | wc -l)
-	echo -e "${RED}[$(date "+%H:%M:%S")] $var domains title grabbed & saved as \"$dir/domain-titles.txt\"${ENDCOLOR}"
-	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
-}
-
-function endpoint_titles(){
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting endpoints title"
-	if [ -e "$dir/endpoints.txt" ]; then
-	cat $dir/endpoints.txt | ./get-title | anew -q $dir/endpoint-titles.txt;
-	var=$(cat $dir/endpoint-titles.txt | wc -l)
-	echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} $var endpoint titles grabbed & saved as \"$dir/endpoint-titles.txt\""
-	else
-	echo -e "${RED}[$(date "+%H:%M:%S")] No \"endpoints.txt\" file found, so skipping${ENDCOLOR}";
-	fi
-	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 }
 
 function portscan(){
@@ -286,103 +255,50 @@ function portscan(){
 	#echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} This may take time as nmap is also detecting running services"
 	for domain in $(<$dir/all-domains.txt); do (echo $domain | naabu -host $domain -passive -silent -scan-all-ips | anew -q $dir/openports.txt); done;
 	var=$(cat $dir/openports.txt | wc -l); var2=$(cat $dir/all-domains.txt | wc -l);
-	echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var ports are open for $var2 domains & saved as \"$2/openports.txt\"${ENDCOLOR}"
-	echo -e "${YELLOW}[$(date "+%H:%M:%S")] Check what services are running${ENDCOLOR}"
+	echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var ports are open for $var2 domains & saved as ${GREEN} $folder_name/openports.txt${ENDCOLOR}"
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 
 	# Final: $dir/openports.txt
 }
+portscan
+
+function domain_titles(){
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting domains + subdomains title"
+	cat $dir/live-domains.txt | httpx -silent | ./get-title | anew -q $dir/domain-titles.txt;
+	var=$(cat $dir/domain-titles.txt | wc -l)
+	echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var domains title grabbed & saved as $folder_name/domain-titles.txt${ENDCOLOR}"
+	
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	#Final: domain-titles.txt
+}
+domain_titles
+
+function endpoint_titles(){
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting endpoints title"
+	if [ -e "$dir/endpoints.txt" ]; then
+	cat $dir/endpoints.txt | ./get-title | anew -q $dir/endpoint-titles.txt;
+	var=$(cat $dir/endpoint-titles.txt | wc -l)
+	echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var endpoints title grabbed & saved as $folder_name/endpoint-titles.txt ${ENDCOLOR}"
+	else
+	echo -e "${RED}[$(date "+%H:%M:%S")] No \"endpoints.txt\" file found, so skipping${ENDCOLOR}";
+	fi
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+}
+endpoint_titles
 
 function open_ports_title(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting open ports title"
 	if [ -e "$dir/openports.txt" ]; then
 	cat $dir/openports.txt | httpx -silent | ./get-title | anew -q $dir/open_ports_title.txt;
 	var=$(cat $dir/open_ports_title.txt | wc -l)
-	echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} $var titles grabbed for open ports domain & saved as \"$dir/open_ports_title.txt\""
+	echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} $var titles grabbed for open ports domain & saved as $folder_name/open_ports_title.txt"
 	else
-	echo -e "${RED}[$(date "+%H:%M:%S")] No \"openports.txt\" file found, so skipping${ENDCOLOR}";
+	echo -e "${RED}[$(date "+%H:%M:%S")] No $folder_name/openports.txt file found, so skipping${ENDCOLOR}";
 	fi
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	#Final: open_ports_title.txt
 }
-
-function subdomain_takeover(){
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Checking for subdomain takeover using Subzy"
-
-	subzy run --targets $dir/live-domains.txt --vuln --hide_fails | sed 1,7d | anew -q $dir/subdomain_takeover.txt;
-
-	if [ -s "$dir/subdomain_takeover.txt" ]; then
-	    var=$(cat $dir/subdomain_takeover.txt | wc -l);
-	    echo -e "${RED}[$(date "+%H:%M:%S")] $var possible domains vulnerable to subdomain takeover";
-	    echo -e "${RED}[$(date "+%H:%M:%S")] File saved as \"subdomain_takeover.txt\"";
-	    echo -e "${red}-------------------------------------------------";
-	    echo -e "${red}-------------------------------------------------";
-	    cat $dir/subdomain_takeover.txt | grep -oP '(?<=\/\/)[^\/]+'
-	    echo -e "${red}-------------------------------------------------";
-	    echo -e "${red}-------------------------------------------------${ENDCOLOR}";
-	else
-	    echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No vulnerable subdomain found for takeover hence file deleted."
-	    rm $dir/subdomain_takeover.txt;
-	fi
-	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
-}
-
-function unauth_cache_purging(){
-    echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Looking for UnAuth-Cache-Purging vulnerability in domains";
-    for domain in $(<$dir/live-domains.txt); do (curl -X PURGE -s $domain >> $dir/unAuthCachePurging.txt); done;
-
-    if [ -e "$dir/endpoints.txt" ]
-	then
-	  	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Looking for UnAuth-Cache-Purging vulnerability in endpoints";
-    	for endpoint in $(<$dir/endpoints.txt); do (curl -X PURGE -s $endpoint >> $dir/unAuthCachePurging.txt); done;
-	else
-		echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No \"endpoints.txt\" found";
-	fi
-
-	# Check if it found any vulnerable asset or not
-	var=$(cat $dir/unAuthCachePurging.txt | grep '"status":' | wc -l);
-	if [ "$var" -eq 0 ]; then
-	    echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No vulnerable asset found for UnAuth-Cache-Purging";
-	    echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} \"unAuthCachePurging.txt\" deleted";
-	    rm $dir/unAuthCachePurging.txt;
-	else
-	    echo -e "${RED}[$(date "+%H:%M:%S")] $var possible assets vulnerable to UnAuth-Cache-Purging vulnerability >> $dir/unAuthCachePurging.txt${ENDCOLOR}";
-	fi
-	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
-}
-
-function testssl(){
-	# Check on live-domains
-	domain_count=$(cat $dir/live-domains.txt | wc -l); time1=$(expr $domain_count \* 3); time2=$(expr $domain_count \* 4);
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Testing TLS/SSL encryption on $domain_count live-domains";
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} This may take time | approx $time1-$time2 minutes remaining";
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} It can't be stopped so ${YELLOW}avoid pressing 'ctrl+c'${ENDCOLOR}";
-	for domain in $(<$dir/live-domains.txt); do (./testssl/testssl.sh $domain >> $dir/testssl.txt); done;
-
-	# Check on open ports domain
-    if [ -e "$dir/openports.txt" ]
-	then
-		var=$(<$dir/openports.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Testing TLS/SSL encryption on open ports for $var domains";
-		openports_domain_count=$(cat $dir/openports.txt | wc -l); time3=$(expr $openports_domain_count \* 3); time4=$(expr $openports_domain_count \* 4);
-		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} This may take time | approx $time3-$time4 minutes remaining";
-		for domain in $(<$dir/openports.txt); do (./testssl/testssl.sh $domain >> $dir/testssl.txt); done;
-	else
-		echo -e "\n\n\n${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No \"openports.txt\" found";
-	fi
-
-	# Saved output
-	if [ -s "$dir/openports.txt" ]; then
-	  echo -e "${YELLOW}[$(date "+%H:%M:%S")] TLS/SSL encryption result saved as '$2/testssl.txt'${ENDCOLOR}";
-	  echo -e "${YELLOW}[$(date "+%H:%M:%S")] Need to be checked manually${ENDCOLOR}";
-	  echo -e "${YELLOW}[$(date "+%H:%M:%S")] Need to be checked manually${ENDCOLOR}";
-	  echo -e "${YELLOW}[$(date "+%H:%M:%S")] Need to be checked manually${ENDCOLOR}";
-	else
-	  echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} Something went wrong! No result found for TLS/SSL encryption";
-	  rm $dir/testssl.txt;
-	fi
-
-	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
-	# Final: $dir/testssl.txt
-}
+open_ports_title
 
 function getjs(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Downloading JS files";
@@ -393,13 +309,20 @@ function getjs(){
 		# Execute the getJS command
 		mkdir -p "$dir/getjs"
 		cd "$dir/getjs"
-		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Downloading all JS files in ${GREEN}getjs${ENDCOLOR} directory";
+		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Downloading all JS files in temp ${GREEN}getjs${ENDCOLOR} directory";
 		cat "../../$dir/live-domains.txt" "../../$dir/endpoints.txt" | getJS | xargs wget -q
-		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Merged all JS in one as ${GREEN}1js.txt${ENDCOLOR}";
+		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Merging all JS in one as 1js.txt";
 		cat * >> "../../$dir/1js.txt"
 		cd ..
-		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Folder containing individual JS files i.e ${GREEN}getjs${ENDCOLOR} deleted";
-		rm -r ./getjs
+		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Folder containing individual JS files i.e getjs deleted";
+		rm -r ./getjs;
+
+		if [ -s "1js.txt" ]; then
+			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Successfully merged all JS in one as ${GREEN}1js.txt${ENDCOLOR}";
+		else
+			echo -e "${YELLOW}[$(date "+%H:%M:%S")] Failed to merge all JS files${ENDCOLOR}";
+			rm 1js.txt;
+		fi
 
 	elif [ -e "$dir/live-domains.txt" ] || [ -e "$dir/endpoints.txt" ]; then
 
@@ -409,23 +332,38 @@ function getjs(){
 
 		if [ -e "../../$dir/live-domains.txt" ]; then
 			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Only ${GREEN}live-domains.txt${ENDCOLOR} found";
-			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Downloading all JS files in ${GREEN}getjs${ENDCOLOR} directory";
+			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Downloading all JS files in temp getjs directory";
 			cat "../../$dir/live-domains.txt" | getJS | xargs wget -q
-			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Merged all JS in one as ${GREEN}1js.txt${ENDCOLOR}";
+			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Merging all JS in one as 1js.txt";
 			cat * >> "../../$dir/1js.txt"
 			cd ..
-			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Folder containing individual JS files i.e ${GREEN}getjs${ENDCOLOR} deleted";
+			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Folder containing individual JS files i.e getjs deleted";
 			rm -r ./getjs
+
+			if [ -s "1js.txt" ]; then
+				echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Successfully merged all JS in one as ${GREEN}1js.txt${ENDCOLOR}";
+			else
+				echo -e "${YELLOW}[$(date "+%H:%M:%S")] Failed to merge all JS files${ENDCOLOR}";
+				rm 1js.txt;
+			fi
+
 
 		elif [ -e "../../$dir/endpoints.txt" ]; then
 			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Only ${GREEN}endpoints.txt${ENDCOLOR} found";
-			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Downloading all JS files in ${GREEN}getjs${ENDCOLOR} directory";
+			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Downloading all JS files in temp getjs directory";
 			cat "../../$dir/endpoints.txt" | getJS | xargs wget -q
-			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Merged all JS in one as ${GREEN}1js.txt${ENDCOLOR}";
+			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Merging all JS in one as 1js.txt";
 			cat * >> "../../$dir/1js.txt"
 			cd ..
-			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Folder containing individual JS files i.e ${GREEN}getjs${ENDCOLOR} deleted";
+			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Folder containing individual JS files i.e getjs deleted";
 			rm -r ./getjs
+
+			if [ -s "1js.txt" ]; then
+				echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Successfully merged all JS in one as ${GREEN}1js.txt${ENDCOLOR}";
+			else
+				echo -e "${YELLOW}[$(date "+%H:%M:%S")] Failed to merge all JS files${ENDCOLOR}";
+				rm 1js.txt;
+			fi
 
 		else
 			echo -e "${YELLOW}[$(date "+%H:%M:%S")] Something went wrong while downloading JS files${ENDCOLOR}";
@@ -433,7 +371,35 @@ function getjs(){
 
 	else
 		# Print a message indicating that both files are missing
-		echo -e "${YELLOW}[$(date "+%H:%M:%S")] Neither live-domains.txt nor endpoints.txt exist, Check if all files exist${ENDCOLOR}";
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")] Something went wrong either files does not exist or GetJS was not able to process domains correctl${ENDCOLOR}";
 		echo -e "${YELLOW}[$(date "+%H:%M:%S")] Skipping JS files download${ENDCOLOR}";
 	fi
+
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	#Final: 1js.txt
 }
+getjs
+
+function filefinder(){
+	mkdir -p $dir/imp_files_list; imp_files_list="$dir/imp_files_list";
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Extracting important files from endpoints.txt";
+
+	#JS
+	if [ $(cat $dir/endpoints.txt | grep '.*\.\(js\|mjs\|jsx\|ts\|vue\|coffee\|es6\|jsp\).*' | wc -l) -gt 0 ]; then
+	    cat $dir/endpoints.txt | grep '.*\.\(js\|mjs\|jsx\|ts\|vue\|coffee\|es6\|jsp\).*' | anew -q $imp_files_list/JSfiles.txt
+	    var=$(cat $imp_files_list/JSfiles.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var JS files found & saved to ${GREEN}$folder_name/imp_files_list/JSfiles.txt${ENDCOLOR}";
+	else
+		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No JS files found";
+	fi
+	#Final: JSfiles.txt
+
+	#Sensitive
+	if [ $(cat $dir/endpoints.txt | grep '.*\.\(back\|backup\|bak\|bakup\|conf\|mdb\|db\|doc\|ini\|rar\|source\|zip\|bac\|sql\|cache\|csproj\|err\|java\|log\|tar\|tar.gz\|tmp\|vb\|git\|xls\|cfg\|swp\|old\|php\|php5\|php7\|config\|cnf\|py\|action\|do\|docx\|yaml\|yml\|class\|md\|access_log\|allow\|bash_config\|bash_history\|bash_logout\|bashrc\|BeforeVMwareToolsInstall\|chroot_list\|conf-vesa\|conf-vmware\|crit\|default\|defs\|deny\|dpkg-old\|error_log\|htaccess\|httpd\|include\|info\|ksh_history\|legacy\|lighttpdpassword\|log1\|log2\|lst\|master\|new\|nmbd\|notice\|options\|orig\|out\|passwd\|pdb\|pl\|properties\|rules\|smb\|smbd\|user\|users\|warn\|Xauthority\|xferlog\).*' | wc -l) -gt 0 ]; then
+	    cat $dir/endpoints.txt | grep '.*\.\(back\|backup\|bak\|bakup\|conf\|mdb\|db\|doc\|ini\|rar\|source\|zip\|bac\|sql\|cache\|csproj\|err\|java\|log\|tar\|tar.gz\|tmp\|vb\|git\|xls\|cfg\|swp\|old\|php\|php5\|php7\|config\|cnf\|py\|action\|do\|docx\|yaml\|yml\|class\|md\|access_log\|allow\|bash_config\|bash_history\|bash_logout\|bashrc\|BeforeVMwareToolsInstall\|chroot_list\|conf-vesa\|conf-vmware\|crit\|default\|defs\|deny\|dpkg-old\|error_log\|htaccess\|httpd\|include\|info\|ksh_history\|legacy\|lighttpdpassword\|log1\|log2\|lst\|master\|new\|nmbd\|notice\|options\|orig\|out\|passwd\|pdb\|pl\|properties\|rules\|smb\|smbd\|user\|users\|warn\|Xauthority\|xferlog\).*' | anew -q $imp_files_list/sensitivefiles.txt
+	    var=$(cat $imp_files_list/sensitivefiles.txt | wc -l); echo -e "${RED}[$(date "+%H:%M:%S")]${ENDCOLOR} $var Sensitive files found & saved to ${GREEN}$folder_name/imp_files_list/sensitivefiles.txt${ENDCOLOR}";
+	else
+		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No Sensitive files found";
+	fi
+	#Final: sensitivefiles.txt
+}
+filefinder

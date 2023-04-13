@@ -190,51 +190,11 @@ function dependencies_2(){
     sudo apt install nmap -y
 }
 
-
-
-
-# To-Do
-    # Run with root or close displaying msg just like EyeWitness
-    # Create a list of tools which are in the list
-    # Lot of mistakes needs to be fixed in SubDomainer
-    # Install cert.py
-    # Check Github starred repositories
-    # Implement Basic kind of tools eg. weak TLS, reference Writeups
-    # I can keep downloaded downloadable projects
-    # s0md3v/Arjun
-    # s0md3v/Parth
-    # https://github.com/Bo0oM/ParamPamPam
-    # https://github.com/dwisiswant0/ppfuzz
-    # https://github.com/0xsapra/fuzzparam
-    # https://github.com/ksharinarayanan/SSRFire
-    # https://github.com/dwisiswant0/crlfuzz
-    # https://github.com/wireghoul/dotdotpwn
-    # https://github.com/swisskyrepo/SSRFmap
-    # https://github.com/teknogeek/ssrf-sheriff
-    # https://github.com/Arachni/arachni
-    # https://github.com/Hackmanit/Web-Cache-Vulnerability-Scanner
-    # https://github.com/drwetter/testssl.sh
-    # https://github.com/Th0h0/autopoisoner
-    # https://github.com/devanshbatham/OpenRedireX
-    # https://github.com/mlcsec/headi
-    # https://github.com/dwisiswant0/hinject
-    # https://github.com/anshumanpattnaik/http-request-smuggling
-    # https://github.com/tismayil/fockcache
-    # https://github.com/s0md3v/Corsy
-    # https://github.com/hahwul/deadfinder
-    # https://github.com/fcavallarin/domdig
-    # https://github.com/the-robot/sqliv
-    # https://github.com/stamparm/DSSS
-    # https://github.com/r0oth3x49/ghauri
-    # https://github.com/wpscanteam/wpscan
-    # https://github.com/hahwul/a2sv
-    # https://github.com/D35m0nd142/LFISuite
-    # https://github.com/mzfr/liffy
-    # https://github.com/0xInfection/XSRFProbe
-    # https://github.com/m4ll0k/BBTz/blob/master/getsrc.py
-    # https://github.com/hakluke/hakcheckurl
-    # https://github.com/tomnomnom/burl
-    # https://github.com/c3l3si4n/godeclutter
-    # https://github.com/tomnomnom/unfurl
-    # https://github.com/intrudir/domainExtractor
-    # Nuclei
+function files_check(){
+        if [ -e "./discoverylist.txt" ]; then
+          echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} discoverylist.txt exists in the current directory";
+        else
+          echo -e "${RED}[$(date "+%H:%M:%S")] discoverylist.txt does not exist in current directory${ENDCOLOR}";
+          exit 1
+        fi
+}

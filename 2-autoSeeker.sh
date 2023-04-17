@@ -11,7 +11,15 @@
 	YELLOW="\033[0;33m"
 	ENDCOLOR="\e[0m"
 
-	domain_count=$(cat $dir/live-domains.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Performing automated testing on ${GREEN}$domain_count live domains${ENDCOLOR}"
+	if [ "$#" -ne 1 ]; then
+	  echo -e "${RED}Script requires 1 argument:
+	  • directory name | eg. hackerone
+	  • Usage: ./recon.sh hackerone${ENDCOLOR}"
+	  exit 1
+	fi
+
+	domain_count=$(cat $dir/live-domains.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Performing automated testing for ${GREEN}$target ${ENDCOLOR}"
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 
 function subdomain_takeover(){
 	echo -e "\n${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Checking for subdomain takeover using Subzy"
@@ -195,6 +203,9 @@ function config_file_finder(){
 	else
 	    echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No configuration files found"
 	fi
+
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	#Final: config_files.txt
 }
 
 function source_code_finder(){
@@ -298,6 +309,9 @@ function dmarc(){
 	else
 	    echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No DMARC vulnerable domains found"
 	fi
+
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	# Final: dmarc.txt
 }
 
 function spf(){
@@ -321,5 +335,200 @@ function spf(){
 	    var=$(cat $dir/spf.txt | wc -l); echo -e "${RED}[$(date "+%H:%M:%S")] $var domains have missing SPF records > $target/spf.txt${ENDCOLOR}"
 	else
 	    echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} All domains are safe from email spoof attack"
+	fi
+
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	# Final: spf.txt
+}
+
+function endpoints_downloader(){
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Downloading endpoints locally to find harcoded stuffs"
+	if [ -e "$dir/endpoints.txt" ] && [ -s "$dir/endpoints.txt" ] ; then
+		
+		var=$(cat $dir/endpoints.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var URLs found in $target/endpoints.txt";
+		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Downloading in temp 'downloaded_endpoints' directory"
+		time1=$(expr $var \* 4 \/ 60); time2=$(expr $var \* 5 \/ 60); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Approx $time1-$time2 minutes remaining";
+
+		cat $dir/endpoints.txt | concurl -c 5 -o $dir/downloaded_endpoints >> /dev/null;
+		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Downloaded files size: ${GREEN}$(du -m --max-depth=0 $dir/downloaded_endpoints/ | awk '{print $1}')M${ENDCOLOR}"
+		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Available  disk space: ${GREEN}$(df -h $0 | awk 'NR==2 {print $4}')${ENDCOLOR}"
+
+		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Combining file contents as > $target/combined_endpoints_content_for_hardcoded_stuffs.txt"
+		find $dir/downloaded_endpoints/ -type f -exec cat {} + > $dir/combined_endpoints_content_for_hardcoded_stuffs.txt;
+		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Done!";
+		rm -r $dir/downloaded_endpoints/; echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} temp 'downloaded_endpoints' directory deleted";
+	else
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")] Either endpoints.txt is missing or the file is empty${ENDCOLOR}";
+	fi
+
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	# Final: combined_endpoints_content_for_hardcoded_stuffs.txt
+}
+
+function hardcoded_stuffs_finder(){
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Looking for hardcoded stuffs"
+	hardcoded_strings_file="./hardcoded_strings.txt"
+
+	#----------------------------------------------------------------------------
+	# All combined endpoints
+
+	if [ -e "$hardcoded_strings_file" ] && [ -s "$hardcoded_strings_file" ]; then
+		combined_endpoints_file="$dir/combined_endpoints_content_for_hardcoded_stuffs.txt"
+		if [ -e "$combined_endpoints_file" ] && [ -s "$combined_endpoints_file" ]; then
+			fgrep -F -f "$hardcoded_strings_file" "$combined_endpoints_file" | anew -q "$dir/hardcoded_stuffs.txt";
+
+			# Checking if anything found
+			if [ -e "$dir/hardcoded_stuffs.txt" ] && [ -s "$dir/hardcoded_stuffs.txt" ]; then
+				var=$(cat "$dir/hardcoded_stuffs.txt" | wc -l);
+				echo -e "${RED}[$(date "+%H:%M:%S")] $var hardcoded strings found > $target/hardcoded_stuffs.txt ${ENDCOLOR}";
+			else
+				echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No hardcoded stuff found!";
+			fi
+		else
+			echo -e "${YELLOW}[$(date "+%H:%M:%S")] No 'combined_endpoints_content_for_hardcoded_stuffs.txt' file found in $target directory or the file is empty${ENDCOLOR}";
+		fi
+
+		
+		#----------------------------------------------------------------------------
+		# Checking in combined JS (1js.txt) as well
+
+		combined_js_file="$dir/1js.txt"
+		if [ -e "$combined_js_file" ] && [ -s "$combined_js_file" ]; then
+			fgrep -F -f "$hardcoded_strings_file" "$combined_js_file" | anew -q "$dir/hardcoded_stuffs.txt";
+
+			# Checking if anything found
+			if [ -e "$dir/hardcoded_stuffs.txt" ] && [ -s "$dir/hardcoded_stuffs.txt" ]; then
+				var=$(cat "$dir/hardcoded_stuffs.txt" | wc -l);
+				echo -e "${RED}[$(date "+%H:%M:%S")] $var hardcoded strings found > $target/hardcoded_stuffs.txt ${ENDCOLOR}";
+			else
+				echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No hardcoded stuff found in combined JS as well";
+			fi
+		else
+			echo -e "${YELLOW}[$(date "+%H:%M:%S")] No '1js.txt' file found in $target directory or the file is empty ${ENDCOLOR}";
+		fi
+
+		#----------------------------------------------------------------------------
+
+	else
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")] No 'hardcoded_strings.txt' (matchers) file found in the current directory ${ENDCOLOR}";
+	fi
+
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	# Final: hardcoded_stuffs.txt
+}
+
+function domain_paths_concatenator(){
+
+	if [ -f "$dir/live-domains.txt" ] && [ -f "$dir/expanded_paths.txt" ]; then
+		# Read domain names from file
+		domains=($(cat $dir/live-domains.txt))
+
+		# Read paths from file
+		paths=($(cat $dir/expanded_paths.txt))
+
+		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Concatenating live-domains with expanded paths"
+		# Loop through domains and paths to concatenate URLs
+		for domain in "${domains[@]}"
+		do
+		    if [[ "$domain" == */ ]]; then
+		        domain="${domain%/}"
+		    fi
+
+		    for path in "${paths[@]}"
+		    do
+		        if [[ "$path" != /* ]]; then
+		            path="/$path"
+		        fi
+
+		        url="$domain$path"
+		        echo "$url" | anew -q $dir/expanded_paths_with_live-domains.txt;
+		    done
+		done
+
+        # Checking file
+        if [[ -s $dir/expanded_paths_with_live-domains.txt ]]; then
+		    var=$(cat $dir/expanded_paths_with_live-domains.txt | wc -l);
+		    echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var lines saved as $target/expanded_paths_with_live-domains.txt"	
+		else
+		    echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Error concatenating domains/paths";
+		    if [[ -e $dir/expanded_paths_with_live-domains.txt ]]; then
+		    	rm $dir/expanded_paths_with_live-domains.txt;
+		    	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Hence expanded_paths_with_live-domains.txt deleted"
+		    fi
+		fi
+
+	else
+	  echo -e "${YELLOW}[$(date "+%H:%M:%S")] Either live-domains.txt or paths.txt missing${ENDCOLOR}"
+	fi
+}
+
+function put_method_finder(){
+
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Finding PUT method on expanded_paths_with_live-domains.txt";
+	if [ -e $dir/expanded_paths_with_live-domains.txt ]; then
+		var=$(cat $dir/expanded_paths_with_live-domains.txt | wc -l); time1=$(expr $var \* 1 \/ 60); time2=$(expr $var \* 2 \/ 60); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Approx $time1-$time2 minutes remaining";
+
+		# Loop through the URLs in the file
+		while read url; do
+		    # Send a PUT request to the URL
+		    response=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$url")
+		    # Check if the response code is 200 OK
+		    if [ "$response" == "200" ]; then
+		        echo $url | anew -q $dir/put_enabled_urls.txt;
+		    fi
+		done < "$dir/expanded_paths_with_live-domains.txt"
+
+	else
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No expanded_paths_with_live-domains.txt file found in $target";
+	fi
+
+	#------------------------------------------------------------------------------------------
+
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Finding PUT method on endpoints.txt";
+	if [ -e $dir/endpoints.txt ]; then
+		var2=$(cat $dir/endpoints.txt | wc -l); time3=$(expr $var2 \* 1 \/ 60); time4=$(expr $var2 \* 2 \/ 60); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Approx $time3-$time4 minutes remaining";
+
+		# Loop through the URLs in the file
+		while read url; do
+		    # Send a PUT request to the URL
+		    response=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$url")
+		    # Check if the response code is 200 OK
+		    if [ "$response" == "200" ]; then
+		        echo $url | anew -q $dir/put_enabled_urls.txt;
+		    fi
+		done < "$dir/endpoints.txt"
+
+	else
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No endpoints.txt file found in $target";
+	fi
+
+	#------------------------------------------------------------------------------------------
+
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Finding PUT method on live-domains.txt";
+	if [ -e $dir/live-domains.txt ]; then
+		var3=$(cat $dir/live-domains.txt | wc -l); time5=$(expr $var3 \* 1 \/ 60); time6=$(expr $var3 \* 2 \/ 60); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Approx $time5-$time6 minutes remaining";
+
+		# Loop through the URLs in the file
+		while read url; do
+		    # Send a PUT request to the URL
+		    response=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$url")
+		    # Check if the response code is 200 OK
+		    if [ "$response" == "200" ]; then
+		        echo $url | anew -q $dir/put_enabled_urls.txt;
+		    fi
+		done < "$dir/live-domains.txt"
+
+	else
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No live-domains.txt file found in $target";
+	fi
+
+	#-------------------------------------------------------------------------------------------
+
+	if [ -e $dir/put_enabled_urls.txt ]; then
+		var4=$(cat $dir/put_enabled_urls.txt | wc -l);
+		echo -e "${RED}[$(date "+%H:%M:%S")] $var4 locations have PUT method enabled${ENDCOLOR}";
+		echo -e "${RED}[$(date "+%H:%M:%S")] File saved as $target/put_enabled_urls.txt${ENDCOLOR}";
+	else
+		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No PUT enabled location found";
 	fi
 }

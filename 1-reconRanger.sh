@@ -118,6 +118,15 @@ function tools_check(){
 	exit 1
 	fi
 
+	# Sprawl-----------------------------------------------------------
+    if [ -e "./sprawl.py" ] && [ -s "./sprawl.py" ]; then
+      echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Sprawl installed";
+    else
+      echo -e "${RED}[$(date "+%H:%M:%S")] Either Sprawl does not exist or the file is empty${ENDCOLOR}";
+      echo -e "${RED}[$(date "+%H:%M:%S")] For more info: https://github.com/tehryanx/sprawl${ENDCOLOR}";
+      exit 1
+    fi
+
 	function nuclei_templates_move(){
 	    nuclei -update-templates -silent
 	    # Check if the destination directory already exists
@@ -165,10 +174,8 @@ function tools_check(){
 	        exit 1
 	    fi
 	}
-	#nuclei_templates_move
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";	
 }
-tools_check
 
 function subdomain_enumeration(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Recon Started"
@@ -207,7 +214,6 @@ function robots_txt(){
 	echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var2 out of $var domains have 'robots.txt' file & saved as $2/robots.txt${ENDCOLOR}";
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 }
-robots_txt
 
 function endpoint_collection(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Crawling domains"
@@ -260,7 +266,6 @@ function portscan(){
 
 	# Final: $dir/openports.txt
 }
-portscan
 
 function domain_titles(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting domains + subdomains title"
@@ -271,7 +276,6 @@ function domain_titles(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	#Final: domain-titles.txt
 }
-domain_titles
 
 function endpoint_titles(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting endpoints title"
@@ -284,7 +288,6 @@ function endpoint_titles(){
 	fi
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 }
-endpoint_titles
 
 function open_ports_title(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting open ports title"
@@ -298,7 +301,6 @@ function open_ports_title(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	#Final: open_ports_title.txt
 }
-open_ports_title
 
 function getjs(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Downloading JS files";
@@ -378,7 +380,6 @@ function getjs(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	#Final: 1js.txt
 }
-getjs
 
 function filefinder(){
 	mkdir -p $dir/imp_files_list; imp_files_list="$dir/imp_files_list";
@@ -400,6 +401,18 @@ function filefinder(){
 	else
 		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No Sensitive files found";
 	fi
+
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	#Final: sensitivefiles.txt
 }
-filefinder
+
+function expand_paths(){
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Expanding URLs paths";
+	if [ -e "$dir/endpoints.txt" ] && [ -s "$dir/endpoints.txt" ] ; then
+		var=$(cat $dir/endpoints.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var URLs found in endpoints.txt";
+		for url in $(<$dir/endpoints.txt); do (echo $url | ./sprawl.py | grep -vE '^(|\.)$' | anew -q $dir/expanded_paths.txt); done
+		var2=$(cat $dir/expanded_paths.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var URLs expanded into $var2 paths > ${GREEN}$folder_name/expanded_paths.txt${ENDCOLOR}";
+	else
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")] Either endpoints.txt is missing or the file is empty${ENDCOLOR}";
+	fi
+}

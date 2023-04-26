@@ -2,6 +2,13 @@
 
 # Usage ./autoSeeker-2.sh 9ine
 # Where 9ine is the folder name of target in /result
+# Functions
+	# Progress bar (clickjacking)
+		# total_domains=$(wc -l < $dir/endpoints.txt)
+		# ((counter++))
+		# echo -ne "$counter/$total_domains $(bc <<< "scale=2; $counter/$total_domains * 100")%\r" >&2
+	# Time Estimates
+		#var3=$(cat $dir/live-domains.txt | wc -l); time5=$(expr $var3 \* 1 \/ 60); time6=$(expr $var3 \* 2 \/ 60); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Approx $time5-$time6 minutes remaining";
 
 # Initials
 	target=$1
@@ -460,6 +467,8 @@ function domain_paths_concatenator(){
 	else
 	  echo -e "${YELLOW}[$(date "+%H:%M:%S")] Either live-domains.txt or paths.txt missing${ENDCOLOR}"
 	fi
+
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 }
 
 function put_method_finder(){
@@ -531,4 +540,190 @@ function put_method_finder(){
 	else
 		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No PUT enabled location found";
 	fi
+
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+}
+
+function second_order_subdomain_takeover(){
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Preparing for second order subdomain takeover";
+
+	if [ -e $dir/all_files.txt ] && [ -s $dir/all_files.txt ]; then
+		grep -Eo "(http[s]?|ftp|smtp):(//|\\/\\/)((localhost)|(127\.0\.0\.1)|(([a-zA-Z0-9\-]+\.)*[a-zA-Z0-9\-\/]{2,}))[^\s\,\"]*" $dir/all_files.txt | sed -E 's/^[^:]+:\/\///' | sed 's/\/.*//' | sort -u > $dir/second_order_subdomain_takeover.txt;
+		
+		if [ -e $dir/second_order_subdomain_takeover.txt ]; then
+			if [ -s $dir/second_order_subdomain_takeover.txt ]; then
+				domain_count=$(cat $dir/second_order_subdomain_takeover.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Checking on $domain_count new third party domains";
+				subzy run --targets $dir/second_order_subdomain_takeover.txt --vuln --hide_fails | sed 1,7d | anew -q $dir/second_order_subdomain_takeover_vulnerable.txt;
+			
+				if [ -e $dir/second_order_subdomain_takeover_vulnerable.txt ]; then
+					if [ -s $dir/second_order_subdomain_takeover_vulnerable.txt ]; then
+						sost_count=$(cat $dir/second_order_subdomain_takeover_vulnerable.txt | grep VULNERABLE | wc -l);
+						rm $dir/second_order_subdomain_takeover.txt
+						echo -e "${RED}[$(date "+%H:%M:%S")] $sost_count domains possible for second order subdomain takeover${ENDCOLOR}";
+						echo -e "${RED}[$(date "+%H:%M:%S")] Saved as > $target/second_order_subdomain_takeover_vulnerable.txt${ENDCOLOR}";
+						echo -e "${RED}[$(date "+%H:%M:%S")] For more info: https://bit.ly/3LvjkDt${ENDCOLOR}";
+					else
+						rm $dir/second_order_subdomain_takeover.txt $dir/second_order_subdomain_takeover_vulnerable.txt;
+						echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No domain vulnerable to second order subdomain takeover";
+					fi
+				else
+					echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No domain vulnerable to second order subdomain takeover";
+				fi
+			
+			else
+				rm $dir/second_order_subdomain_takeover.txt
+				echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No domain found from all_files.txt";
+			fi
+		else
+			echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No domain found from all_files.txt";
+		fi
+	else
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No combined HTML & JS file as all_files.txt found";
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} Hence skipping";
+	fi
+
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	# Final: second_order_subdomain_takeover_vulnerable.txt
+}
+
+function clickjacking(){
+	#------------------------------------------------------
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Finding Clickjacking on live-domains";
+	total_live_domains=$(wc -l < $dir/live-domains.txt)
+	for domain in $(<$dir/live-domains.txt); do
+		if ! curl -s -I $domain | grep -q -i 'X-Frame-Options'; then
+			echo $domain | anew -q $dir/clickjacking.txt; 
+			
+		    # Progress bar
+			((counter++))
+			echo -ne "${GREEN}[Progress]${ENDCOLOR} $counter/$total_live_domains $(bc <<< "scale=2; $counter/$total_live_domains * 100")%\r" >&2
+		
+		fi; done;
+
+	#--------------------------------------------------------------
+
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Finding Clickjacking on endpoints";
+	total_endpoints=$(wc -l < $dir/endpoints.txt)
+	for endpoint in $(<$dir/endpoints.txt); do
+		if ! curl -s -I $endpoint | grep -q -i 'X-Frame-Options'; then
+			echo $endpoint | anew -q $dir/clickjacking.txt; 
+			
+		    # Progress bar
+			((counter++))
+			echo -ne "${GREEN}[Progress]${ENDCOLOR} $counter/$total_endpoints $(bc <<< "scale=2; $counter/$total_endpoints * 100")%\r" >&2
+		
+		fi; done;
+
+	#--------------------------------------------------------------
+
+	if [ -e $dir/clickjacking.txt ]; then
+		if [ -s $dir/clickjacking.txt ]; then
+			cljk_count=$(cat $dir/clickjacking.txt | wc -l); echo -e "${RED}[$(date "+%H:%M:%S")] $cljk_count urls/domains have Clickjacking vulnerability${ENDCOLOR}";
+			echo -e "${RED}[$(date "+%H:%M:%S")] Saved as > $target/clickjacking.txt ${ENDCOLOR}";
+		else
+			echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} clickjacking.txt is empty";
+		fi
+
+	else
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No clickjacking found";
+	fi
+
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	# Final: clickjacking.txt
+}
+
+function cors(){
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Finding Cross Origin Resource Sharing (CORS) misconfig in live-domains"
+	total_live_domains=$(wc -l < $dir/live-domains.txt)
+	time_min=$(expr $total_live_domains \* 25 / 60)
+	time_max=$(expr $total_live_domains \* 35 / 60)
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Approx $time_min-$time_max minutes remaining"
+	
+	for domain in $(<$dir/live-domains.txt); do
+		python3 corsy/corsy.py -u $domain -t 20 >> $dir/cors.txt
+
+		# Progress bar
+		((counter++))
+		echo -ne "${GREEN}[Progress]${ENDCOLOR} $counter/$total_live_domains $(bc <<< "scale=2; $counter/$total_live_domains * 100")%\r" >&2
+	done
+
+	# --------------------------------------------------------------
+
+	if [ -e $dir/cors.txt ]; then
+		if [ -s $dir/cors.txt ]; then
+			cors_count=$(grep -E "(http[s]?:)" $dir/cors.txt | grep -v "ACAO" | sort -u | wc -l)
+			if [ $cors_count -gt 0 ]; then
+				echo -e "${RED}[$(date "+%H:%M:%S")] $cors_count CORS misconfig found > $target/cors.txt${ENDCOLOR}"
+
+				# Severity Count
+				high=$(grep -c "Severity: high" $dir/cors.txt)
+				medium=$(grep -c "Severity: medium" $dir/cors.txt)
+				low=$(grep -c "Severity: low" $dir/cors.txt)
+
+				if [ $high -gt 0 ]; then echo -e "${RED}[$(date "+%H:%M:%S")] High Severity: $high${ENDCOLOR}"; fi
+				if [ $medium -gt 0 ]; then echo -e "${RED}[$(date "+%H:%M:%S")] Medium Severity: $medium${ENDCOLOR}"; fi
+				if [ $low -gt 0 ]; then echo -e "${RED}[$(date "+%H:%M:%S")] Low Severity: $low${ENDCOLOR}"; fi
+				echo -e "${RED}[$(date "+%H:%M:%S")] Read ./scripts/corsy/db/details.json for exploitation${ENDCOLOR}"
+			else
+				echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No CORS misconfigs found"
+			fi
+		else
+			echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} Error performing CORS check"
+		fi
+	else
+		rm $dir/cors.txt
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} Error performing CORS check"
+	fi
+
+	# --------------------------------------------------------------
+
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Finding CORS misconfig in endpoints"
+	time_min2=$(expr $total_live_domains \* 25 / 60)
+	time_max2=$(expr $total_live_domains \* 35 / 60)
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Approx $time_min2-$time_max2 minutes remaining"
+	total_endpoints=$(wc -l < $dir/endpoints.txt)
+	for endpoint in $(<$dir/endpoints.txt); do
+		
+		python3 corsy/corsy.py -u $endpoint -t 20 >> $dir/cors.txt
+
+	    # Progress bar
+		((counter++))
+		echo -ne "${GREEN}[Progress]${ENDCOLOR} $counter/$total_endpoints $(bc <<< "scale=2; $counter/$total_endpoints * 100")%\r" >&2
+		
+		done;
+
+	#--------------------------------------------------------------
+
+	if [ -e $dir/cors.txt ]; then
+		if [ -s $dir/cors.txt ]; then
+			cors_count2=$(cat $dir/cors.txt | grep -E "(http[s]?:)" | grep -v "ACAO" | sort -u | wc -l);
+			diff=$((cors_count2 - cors_count))
+
+			# Check if the difference is greater than zero
+			if ((diff > 0)); then
+				# Severity Count
+				high2=$(grep -c "Severity: high" $dir/cors.txt); hi_diff=$((high2 - high));
+				medium2=$(grep -c "Severity: medium" $dir/cors.txt); med_diff=$((medium2 - medium));
+				low2=$(grep -c "Severity: low" $dir/cors.txt); low_diff=$((low2 - low));
+
+				if [ $hi_diff -gt 0 ]; then echo -e "${RED}[$(date "+%H:%M:%S")] $hi_diff new high severity CORS misconfig found${ENDCOLOR}"; fi
+				if [ $med_diff -gt 0 ]; then echo -e "${RED}[$(date "+%H:%M:%S")] $med_diff new medium severity CORS misconfig found${ENDCOLOR}"; fi
+				if [ $low_diff -gt 0 ]; then echo -e "${RED}[$(date "+%H:%M:%S")] $low_diff new low severity CORS misconfig found${ENDCOLOR}"; fi
+				echo -e "${RED}[$(date "+%H:%M:%S")] All saved as > $target/cors.txt${ENDCOLOR}";
+				echo -e "${RED}[$(date "+%H:%M:%S")] Read ./scripts/corsy/db/details.json for exploitation${ENDCOLOR}";
+
+			else
+			    echo -e "${GREEN}[$(date "+%H:%M:%S")] No CORS misconfig found in endpoints${ENDCOLOR}";
+			fi
+
+		else
+			echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} Error performing CORS check";
+		fi
+	else
+		rm $dir/cors.txt;
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} Error performing CORS check";
+	fi
+
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	# Final: cors.txt
 }

@@ -1,64 +1,57 @@
-# 0-Install.sh
-    # Run with root or close displaying msg just like EyeWitness
+# 0-all
     # Create a list of tools which are in the list
     # Lot of mistakes needs to be fixed in SubDomainer
     # Install cert.py
     # Check Github starred repositories
-    # Implement Basic kind of tools eg. weak TLS, reference Writeups
     # I can keep downloaded downloadable projects
-    # s0md3v/Arjun
-    # s0md3v/Parth
-    # https://github.com/Bo0oM/ParamPamPam
-    # https://github.com/dwisiswant0/ppfuzz
-    # https://github.com/0xsapra/fuzzparam
     # https://github.com/ksharinarayanan/SSRFire
-    # https://github.com/dwisiswant0/crlfuzz
     # https://github.com/wireghoul/dotdotpwn
-    # https://github.com/swisskyrepo/SSRFmap
-    # https://github.com/teknogeek/ssrf-sheriff
-    # https://github.com/Arachni/arachni
-    # https://github.com/Hackmanit/Web-Cache-Vulnerability-Scanner
-    # https://github.com/drwetter/testssl.sh
-    # https://github.com/Th0h0/autopoisoner
-    # https://github.com/devanshbatham/OpenRedireX
-    # https://github.com/mlcsec/headi
-    # https://github.com/dwisiswant0/hinject
     # https://github.com/anshumanpattnaik/http-request-smuggling
-    # https://github.com/tismayil/fockcache
-    # https://github.com/s0md3v/Corsy
+    # https://github.com/tismayil/fockcache (Cache Poisoning)
     # https://github.com/hahwul/deadfinder
-    # https://github.com/fcavallarin/domdig
-    # https://github.com/the-robot/sqliv
-    # https://github.com/stamparm/DSSS
-    # https://github.com/r0oth3x49/ghauri
-    # https://github.com/wpscanteam/wpscan
     # https://github.com/hahwul/a2sv
     # https://github.com/D35m0nd142/LFISuite
     # https://github.com/mzfr/liffy
     # https://github.com/0xInfection/XSRFProbe
     # https://github.com/m4ll0k/BBTz/blob/master/getsrc.py
     # https://github.com/hakluke/hakcheckurl
-    # https://github.com/tomnomnom/burl
     # https://github.com/c3l3si4n/godeclutter
     # https://github.com/tomnomnom/unfurl
-    # https://github.com/intrudir/domainExtractor
     # Nuclei
+    # Make nuclei templates for config_file_finder & source_code_finder from 2-autoSeeker.sh
 
 # 1-reconRanger.sh
 	# Integrate Amass
 	# Proxy server for portscan, endpoint_collection
-	# Before closing or exitin script, it should print all the yellow & red highlights in the end altogether
+	# Before closing or exiting script, it should print all the yellow & red highlights in the end altogether
 	# Send Webhook notification on red highlights
 	# Subdomain fuzzing
+    # https://github.com/intrudir/domainExtractor
 
 # 2-autoSeeker.sh
 	# https://github.com/m3n0sd0n4ld/GooFuzz
+    # JIRAya in Nuclei https://github.com/anmolksachan/JIRAya/blob/main/JIRAya.py
 
 # 3-karnaCrusader.sh
-	# Xray
-	# https://github.com/0xElkot/Bug-Bounty-Automation/blob/main/0xelkot.sh
-	# https://medium.com/@0xelkot/how-i-get-10-sqli-and-30-xss-via-automation-tool-cebbd9104479
 	# https://github.com/daffainfo/Git-Secret
+
+# SSRF
+    # https://github.com/swisskyrepo/SSRFmap
+    # https://github.com/teknogeek/ssrf-sheriff
+
+# XSS
+    # https://github.com/fcavallarin/domdig
+    # https://twitter.com/NandanLohitaksh/status/1591656762117361666
+
+# Parameter collection
+    # s0md3v/Arjun
+    # https://github.com/Bo0oM/ParamPamPam
+    # https://github.com/0xsapra/fuzzparam
+
+# SQLi
+    # https://github.com/stamparm/DSSS
+    # https://github.com/the-robot/sqliv
+    # https://github.com/r0oth3x49/ghauri
 
 # Nuclei Templates
     https://github.com/daffainfo/bash-bounty
@@ -68,3 +61,45 @@
     - SQLi at scale using Ghauri or SQLmap : https://bit.ly/3KxuuWA
     - Open redirect, LFI using Autorepeater just like SSRF : https://bit.ly/416gnhI
     - Make own one liner bash scripts for ocassional usage : https://bit.ly/3obWPtV
+
+# Run separately | Make executor which will execute all scripts in different tabs | Make alias | Show message in Alpha
+    - Nuclei
+    - Prototype Pollution Fuzz : https://github.com/dwisiswant0/ppfuzz
+    - Google dorks : FGDS.sh
+    - HTTP request smuggler : https://github.com/defparam/smuggler
+    - Broken link checker : https://github.com/lycheeverse/lychee
+        - It is taking too much time for retries, connection etc.
+        - stdin domains/urls
+        
+        lychee --user-agent security-testing --insecure --timeout 5 --threads 10 --github-token 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 --skip-missing -q -o blc.txt --max-retries 2 --max-redirects 3
+        
+        - Extract 404 using > grep '\[404\]'
+
+        - Some other websites:
+            https://www.brokenlinkcheck.com/broken-links.php#status
+            https://www.drlinkcheck.com/account/subscriptions/1/projects/1/overview
+    - CRLF : https://github.com/dwisiswant0/crlfuzz
+        make seperate script for authenticated requests with cookie & proxy
+    - Scanner : https://github.com/Arachni/arachni
+    - Web Cache Poisoning
+        - https://github.com/Hackmanit/Web-Cache-Vulnerability-Scanner#specify-headers-parameters-cookies-and-more
+        - https://github.com/Th0h0/autopoisoner
+    - AEM hacker : https://github.com/0ang3el/aem-hacker
+
+# Aliases
+    Broken Link Checker
+
+    for domain in $(<live-domains.txt); do (lychee --user-agent security-testing --insecure --timeout 5 --threads 10 --github-token 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 --skip-missing -q --max-retries 2 --max-redirects 3 $domain >> blc.txt); done;
+
+    - Screenshort taker using HTTPX but theses dependencies need to be installed
+    
+    sudo apt-get install libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libxkbcommon0 libpango1.0-0 libcairo2 -y
+
+All-In-One
+    https://github.com/vavkamil/awesome-bugbounty-tools
+
+403 Bypass
+    https://github.com/laluka/bypass-url-parser#readme
+
+1 function tool
+    https://github.com/random-robbie/Jira-Scan

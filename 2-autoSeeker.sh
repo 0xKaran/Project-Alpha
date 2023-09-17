@@ -2,15 +2,6 @@
 
 # Usage ./autoSeeker-2.sh 9ine
 # Where 9ine is the folder name of target in /result
-# Functions
-	# Progress bar (clickjacking)
-		# total_domains=$(wc -l < $dir/1reconRanger/endpoints.txt)
-		# ((counter++))
-		# echo -ne "$counter/$domain_count $(bc <<< "scale=0; $counter/$domain_count * 100")%\r" >&2
-	# Time Estimates
-		#if (( $(echo "($endpoint_count*15/60)-($endpoint_count*25/60)<1" | bc -l) )); then echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Less than 3 mins remaining"; else echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Approx $(expr $endpoint_count \* 15 / 60)-$(expr $endpoint_count \* 25 / 60) minutes remaining"; fi
-	# Notification alert
-		##python3 notification.py "$(echo -e "[ $(date "+%H:%M:%S") ] [ *$target* ] [ 2-autoSeeker ]\n\n-----------------\n\nFile saved as > $target/------------")"
 
 # Initials
 	target=$1
@@ -42,7 +33,7 @@
 	# Variables
 	reconRanger=$dir/1reconRanger;
 	output2=$dir/2autoSeeker;
-
+	folder_name=$target/2autoSeeker
 
 	# live-domains exists
 	if [ ! -s "$reconRanger/live-domains.txt" ]; then
@@ -65,27 +56,53 @@
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 
 function subdomain_takeover(){
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Checking for ${GREEN}subdomain takeover${ENDCOLOR} using Subzy"
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} CHECKING FOR ${GREEN}SUBDOMAIN TAKEOVER${ENDCOLOR} USING SUBZY"
 
 	subzy run --targets $reconRanger/live-domains.txt --vuln --hide_fails | sed 1,7d | anew -q $output2/subdomain_takeover.txt;
 
 	if [ -s "$output2/subdomain_takeover.txt" ]; then
 	    var=$(cat $output2/subdomain_takeover.txt | wc -l);
-	    echo -e "${RED}[$(date "+%H:%M:%S")] $var possible domains vulnerable to subdomain takeover";
-	    echo -e "${RED}[$(date "+%H:%M:%S")] File saved as '$(pwd)/subdomain_takeover.txt'";
+	    echo -e "${RED}[$(date "+%H:%M:%S")] $var/$domain_count possible domains vulnerable to subdomain takeover";
+	    echo -e "${RED}[$(date "+%H:%M:%S")] File saved as '$folder_name/subdomain_takeover.txt'";
 	    #python3 notification.py "$(echo -e "[ $(date "+%H:%M:%S") ] [ *$target* ] [ 2-autoSeeker ]\n\n$var possible domains vulnerable to subdomain takeover\n\nFile saved as > $target/subdomain_takeover.txt")"
-	    echo -e "${red}-------------------------------------------------";
-	    echo -e "${red}-------------------------------------------------";
-	    cat $output2/subdomain_takeover.txt | grep -oP '(?<=\/\/)[^\/]+'
-	    echo -e "${red}-------------------------------------------------";
-	    echo -e "${red}-------------------------------------------------${ENDCOLOR}";
+
+	    #CNAME records checking to preciously extract potential domains for STO
+	    function cname_checker(){
+			if [ -s "$output2/subdomain_takeover.txt" ]; then
+				echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} CHECKING ${GREEN}CNAME RECORDS${ENDCOLOR} TO EXTRACT POTENTIAL DOMAINS"	
+				echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Making sure to pass only domains without protocol or special chars eg: 'sub.example.com'"
+				grep -Eo '([a-zA-Z0-9.-]+)\.[a-zA-Z]{2,}' "$output2/subdomain_takeover.txt" | anew -q "$output2/check_cname.txt"
+
+				# Function to check records
+			    python3 ./cname_checker.py $output2/check_cname.txt | anew -q $output2/subdomain_takeover_cname.txt;
+
+			    # Checking if anything found
+				cname_file="$output2/subdomain_takeover_cname.txt"
+				if [ -s "$cname_file" ]; then
+				    all=$(wc -l < "$output2/subdomain_takeover.txt")
+				    cname=$(grep -c "\[CNAME-DOMAIN\]" "$cname_file")
+
+				    if (( cname >= 1 )); then
+				        echo -e "${RED}[$(date "+%H:%M:%S")] $cname/$all have CNAME records${ENDCOLOR}"
+				        echo -e "${RED}[$(date "+%H:%M:%S")] Verify error & CNAME point to get close to STO, saved as > $folder_name/subdomain_takeover_cname.txt${ENDCOLOR}"
+				    	echo -e "${RED}[$(date "+%H:%M:%S")] For more info: https://github.com/EdOverflow/can-i-take-over-xyz";
+				    else
+				        echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No CNAME records found for STO vulnerable domains, means they're false positive!"
+				    	echo -e "${RED}[$(date "+%H:%M:%S")] For more info: https://github.com/EdOverflow/can-i-take-over-xyz";
+				    fi
+				fi
+				rm -f $output2/check_cname.txt;
+			fi
+		}
+		cname_checker
+
 	else
 	    echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No vulnerable subdomain found"
 	    rm $output2/subdomain_takeover.txt;
 	fi
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 }
-#subdomain_takeover
+subdomain_takeover
 
 function unauth_cache_purging(){
 	# Domains
@@ -113,48 +130,14 @@ function unauth_cache_purging(){
 	fi
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 }
-#unauth_cache_purging
-
-function testssl(){
-	# Check on live-domains
-	domain_count=$(cat $reconRanger/live-domains.txt | wc -l); time1=$(expr $domain_count \* 3); time2=$(expr $domain_count \* 4);
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Testing ${GREEN}TLS/SSL encryption${ENDCOLOR} on $domain_count live-domains";
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} This may take time | approx $time1-$time2 minutes remaining";
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} It can't be stopped so ${YELLOW}avoid pressing 'ctrl+c'${ENDCOLOR}";
-	for domain in $(<$reconRanger/live-domains.txt); do (./testssl/testssl.sh $domain >> $output2/testssl.txt); done;
-
-	# Check on open ports domain
-    if [ -e "$reconRanger/openports.txt" ]
-	then
-		var=$(<$reconRanger/openports.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Testing TLS/SSL encryption on open ports for $var domains";
-		openports_domain_count=$(cat $reconRanger/openports.txt | wc -l); time3=$(expr $openports_domain_count \* 3); time4=$(expr $openports_domain_count \* 4);
-		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} This may take time | approx $time3-$time4 minutes remaining";
-		for domain in $(<$reconRanger/openports.txt); do (./testssl/testssl.sh $domain >> $output2/testssl.txt); done;
-	else
-		echo -e "\n\n\n${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No \"openports.txt\" found";
-	fi
-
-	# Saved output
-	if [ -s "$reconRanger/openports.txt" ]; then
-	  echo -e "${YELLOW}[$(date "+%H:%M:%S")] TLS/SSL encryption result saved as > $target/testssl.txt${ENDCOLOR}";
-	  echo -e "${RED}[$(date "+%H:%M:%S")] Need to be checked manually${ENDCOLOR}";
-	  echo -e "${RED}[$(date "+%H:%M:%S")] Need to be checked manually${ENDCOLOR}";
-	  #python3 notification.py "$(echo -e "[ $(date "+%H:%M:%S") ] [ *$target* ] [ 2-autoSeeker ]\n\nTestSSL result saved as $target/testssl.txt\n\nManual check still needed!")"
-	else
-	  echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} Something went wrong! No result found for TLS/SSL encryption";
-	  rm $output2/testssl.txt;
-	fi
-
-	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
-	# Final: $output2/testssl.txt
-}
-#testssl
+unauth_cache_purging
 
 function config_file_finder(){
 
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Looking for ${GREEN}config files${ENDCOLOR}"
 	
 	# Joomla----------------------------------------------------------------
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Joomla"
 	if [[ ! -f $reconRanger/live-domains.txt ]]; then
     	echo -e "${YELLOW}[$(date "+%H:%M:%S")] No 'live-domains.txt' found for $target${ENDCOLOR}";
     else
@@ -168,6 +151,7 @@ function config_file_finder(){
 	fi
 	
 	# Laravel----------------------------------------------------------------
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Laravel"
 	if [[ ! -f $reconRanger/live-domains.txt ]]; then
 		echo -e "${YELLOW}[$(date "+%H:%M:%S")] No 'live-domains.txt' found for $target${ENDCOLOR}";
 	else
@@ -179,8 +163,23 @@ function config_file_finder(){
 		fi
 		done	
 	fi
+
+	# Laravel Log----------------------------------------------------------------
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Laravel Log"
+	if [[ ! -f $reconRanger/live-domains.txt ]]; then
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")] No 'live-domains.txt' found for $target${ENDCOLOR}";
+	else
+	    for domain in $(<$reconRanger/live-domains.txt);
+		do
+		if [[ $(curl -ks "$domain/storage/logs/laravel.log" ) =~ 'laravel\framework' ]]; then
+			echo -e "${RED}[$(date "+%H:%M:%S")] Laravel debug log file found @ $domain/storage/logs/laravel.log${ENDCOLOR}"
+			echo "$domain/storage/logs/laravel.log" | anew -q $output2/config_files.txt
+		fi
+		done	
+	fi
 	
 	# Zend----------------------------------------------------------------
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Zend"
 	if [[ ! -f $reconRanger/live-domains.txt ]]; then
 		echo -e "${YELLOW}[$(date "+%H:%M:%S")] No 'live-domains.txt' found for $target${ENDCOLOR}";
 	else
@@ -194,6 +193,7 @@ function config_file_finder(){
 	fi
 
 	# Wordpress Log----------------------------------------------------------------
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Wordpress"
 	if [[ ! -f $reconRanger/live-domains.txt ]]; then
 		echo -e "${YELLOW}[$(date "+%H:%M:%S")] No 'live-domains.txt' found for $target${ENDCOLOR}";
 	else
@@ -206,18 +206,6 @@ function config_file_finder(){
 		done	
 	fi
 
-	# Laravel Log----------------------------------------------------------------
-	if [[ ! -f $reconRanger/live-domains.txt ]]; then
-		echo -e "${YELLOW}[$(date "+%H:%M:%S")] No 'live-domains.txt' found for $target${ENDCOLOR}";
-	else
-	    for domain in $(<$reconRanger/live-domains.txt);
-		do
-		if [[ $(curl -ks "$domain/storage/logs/laravel.log" ) =~ 'laravel\framework' ]]; then
-			echo -e "${RED}[$(date "+%H:%M:%S")] Laravel debug log file found @ $domain/storage/logs/laravel.log${ENDCOLOR}"
-			echo "$domain/storage/logs/laravel.log" | anew -q $output2/config_files.txt
-		fi
-		done	
-	fi
 	#----------------------------------------------------------------
 
 	if [ -e "$output2/config_files.txt" ]
@@ -230,7 +218,7 @@ function config_file_finder(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	#Final: config_files.txt
 }
-#config_file_finder
+config_file_finder
 
 function source_code_finder(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Looking for ${GREEN}source code files${ENDCOLOR}"
@@ -314,7 +302,7 @@ function source_code_finder(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	#Final: source_code.txt
 }
-#source_code_finder
+source_code_finder
 
 function dmarc(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Checking ${GREEN}DMARC vulnerability${ENDCOLOR}"
@@ -342,7 +330,7 @@ function dmarc(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	# Final: dmarc.txt
 }
-#dmarc
+dmarc
 
 function spf(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Checking ${GREEN}missing SPF${ENDCOLOR} records"
@@ -371,7 +359,7 @@ function spf(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	# Final: spf.txt
 }
-#spf
+spf
 
 function endpoints_downloader(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Downloading endpoints locally to find harcoded stuffs"
@@ -396,7 +384,7 @@ function endpoints_downloader(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	# Final: combined_endpoints_content_for_hardcoded_stuffs.txt
 }
-#endpoints_downloader
+endpoints_downloader
 
 function hardcoded_stuffs_finder(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Looking for ${GREEN}hardcoded stuffs${ENDCOLOR}"
@@ -452,7 +440,7 @@ function hardcoded_stuffs_finder(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	# Final: hardcoded_stuffs.txt
 }
-#hardcoded_stuffs_finder
+hardcoded_stuffs_finder
 
 function domain_paths_concatenator(){
 
@@ -500,7 +488,7 @@ function domain_paths_concatenator(){
 
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 }
-#domain_paths_concatenator
+domain_paths_concatenator
 
 function put_method_finder(){
 
@@ -581,7 +569,7 @@ function put_method_finder(){
 
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 }
-#put_method_finder
+put_method_finder
 
 function second_order_subdomain_takeover(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Finding ${GREEN}second order subdomain takeover${ENDCOLOR}";
@@ -634,7 +622,7 @@ function second_order_subdomain_takeover(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	# Final: second_order_subdomain_takeover_vulnerable.txt
 }
-#second_order_subdomain_takeover
+second_order_subdomain_takeover
 
 function clickjacking(){
 	#------------------------------------------------------
@@ -683,7 +671,7 @@ function clickjacking(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	# Final: clickjacking.txt
 }
-#clickjacking
+clickjacking
 
 function cors(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Finding ${GREEN}Cross Origin Resource Sharing (CORS)${ENDCOLOR} misconfig in live-domains"
@@ -781,7 +769,7 @@ function cors(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	# Final: cors.txt
 }
-#cors
+cors
 
 function wordpress_scan(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Finding ${GREEN}WordPress vulnerabilities${ENDCOLOR}"
@@ -823,7 +811,7 @@ function wordpress_scan(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	# Final: wpscan.txt
 }
-#wordpress_scan
+wordpress_scan
 
 function crlf(){
 	# domain GET---------------------------------------------------------------------
@@ -991,7 +979,7 @@ function crlf(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	# Final: crlf-domain-GET.txt, crlf-domain-POST.txt, crlf-endpoints-GET.txt, crlf-endpoints-POST.txt
 }
-#crlf
+crlf
 
 function host_header_injection_hinject(){
 	
@@ -1055,7 +1043,7 @@ function host_header_injection_hinject(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	# Final: host_header_injection_hinject.txt
 }
-#host_header_injection_hinject
+host_header_injection_hinject
 
 function social_media_takeover(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Looking for ${GREEN}social media takeover${ENDCOLOR} on $domain_count live-domains"
@@ -1101,7 +1089,7 @@ function social_media_takeover(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	# Final: socialhunter.txt
 }
-#social_media_takeover
+social_media_takeover
 
 function chopchop(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Quickly finding ${GREEN}exposed critical endpoints${ENDCOLOR} on $domain_count live-domains using ChopChop"
@@ -1136,4 +1124,39 @@ function chopchop(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	# Final: chopchop.txt
 }
-#chopchop
+chopchop
+
+function testssl(){
+	# Check on live-domains
+	domain_count=$(cat $reconRanger/live-domains.txt | wc -l); time1=$(expr $domain_count \* 3); time2=$(expr $domain_count \* 4);
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Testing ${GREEN}TLS/SSL encryption${ENDCOLOR} on $domain_count live-domains";
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} This may take time | approx $time1-$time2 minutes remaining";
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} It can't be stopped so ${YELLOW}avoid pressing 'ctrl+c'${ENDCOLOR}";
+	for domain in $(<$reconRanger/live-domains.txt); do (./testssl/testssl.sh $domain >> $output2/testssl.txt); done;
+
+	# Check on open ports domain
+    if [ -e "$reconRanger/openports.txt" ]
+	then
+		var=$(<$reconRanger/openports.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Testing TLS/SSL encryption on open ports for $var domains";
+		openports_domain_count=$(cat $reconRanger/openports.txt | wc -l); time3=$(expr $openports_domain_count \* 3); time4=$(expr $openports_domain_count \* 4);
+		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} This may take time | approx $time3-$time4 minutes remaining";
+		for domain in $(<$reconRanger/openports.txt); do (./testssl/testssl.sh $domain >> $output2/testssl.txt); done;
+	else
+		echo -e "\n\n\n${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No \"openports.txt\" found";
+	fi
+
+	# Saved output
+	if [ -s "$reconRanger/openports.txt" ]; then
+	  echo -e "${YELLOW}[$(date "+%H:%M:%S")] TLS/SSL encryption result saved as > $target/testssl.txt${ENDCOLOR}";
+	  echo -e "${RED}[$(date "+%H:%M:%S")] Need to be checked manually${ENDCOLOR}";
+	  echo -e "${RED}[$(date "+%H:%M:%S")] Need to be checked manually${ENDCOLOR}";
+	  #python3 notification.py "$(echo -e "[ $(date "+%H:%M:%S") ] [ *$target* ] [ 2-autoSeeker ]\n\nTestSSL result saved as $target/testssl.txt\n\nManual check still needed!")"
+	else
+	  echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} Something went wrong! No result found for TLS/SSL encryption";
+	  rm $output2/testssl.txt;
+	fi
+
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	# Final: $output2/testssl.txt
+}
+testssl

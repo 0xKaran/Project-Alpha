@@ -75,8 +75,8 @@
 	fi
 
 function tools_check(){
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Checking for required tools"
-	TOOLS=(
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Checking for required tools"	
+		TOOLS=(
 		httprobe
 		anew
 		katana
@@ -181,7 +181,7 @@ function tools_check(){
 	}
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";	
 }
-#tools_check
+tools_check
 
 function subdomain_enumeration(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Recon Started"
@@ -200,7 +200,7 @@ function subdomain_enumeration(){
 
 	echo -e "${GREEN}\n[$(date "+%H:%M:%S")]${ENDCOLOR} Checking live hosts"
 	var1=$(cat $dir/1reconRanger/live-domains.txt | wc -l); var2=$(cat $dir/1reconRanger/subdomains.txt | wc -l);
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var1 out of $var2 hosts are live & saved as > live-domains.txt"
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var1 out of $var2 hosts are live & saved as > $folder_name/1reconRanger/live-domains.txt"
 
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Saving all (active + inactive) domains as > all-domains.txt"
 	cat $dir/1reconRanger/subdomains.txt $dir/1reconRanger/new-domains-by-cero.txt $dir/1reconRanger/live-domains.txt | sed 's/http[s]*:\/\///g' | anew -q $dir/1reconRanger/all-domains.txt;
@@ -212,7 +212,7 @@ function subdomain_enumeration(){
 
 	# Final = $dir/1reconRanger/live-domains.txt
 }
-#subdomain_enumeration
+subdomain_enumeration
 
 function robots_txt(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Finding robots.txt";
@@ -223,7 +223,7 @@ function robots_txt(){
 
 		if [ -s $dir/1reconRanger/robots.txt ]; then
 			var=$(cat $dir/1reconRanger/live-domains.txt | wc -l); var2=$(cat $dir/1reconRanger/robots.txt | wc -l)
-			echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var2 out of $var domains have 'robots.txt' file & saved as > $folder_name/robots.txt${ENDCOLOR}";
+			echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var2 out of $var domains have 'robots.txt' file & saved as > $folder_name/1reconRanger/robots.txt${ENDCOLOR}";
 		else
 			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No 'robots.txt' found";
 			rm $dir/1reconRanger/robots.txt;
@@ -235,18 +235,18 @@ function robots_txt(){
 
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 }
-#robots_txt
+robots_txt
 
 function endpoint_collection(){
 
-	# Domain Crawl
+	# Domain Crawl-------------------------------------------------------
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Crawling domains"
 	cat $domain_list | httpx -silent | hakrawler -insecure -subs -t 20 -u >> $dir/1reconRanger/crawled-urls.txt;
 	# File is empty or not
 	if [ -e $dir/1reconRanger/crawled-urls.txt ]; then
 		if [ -s $dir/1reconRanger/crawled-urls.txt ]; then
 			var=$(cat $dir/1reconRanger/crawled-urls.txt | wc -l);
-			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var links found from crawling domains & saved as > $folder_name/crawled-urls.txt";
+			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var links found from crawling domains & saved as > $folder_name/1reconRanger/crawled-urls.txt";
 		else
 			echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No link found from crawling";
 			rm $dir/1reconRanger/crawled-urls.txt;
@@ -255,7 +255,7 @@ function endpoint_collection(){
 		echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} Unable to create 'crawled-urls.txt' file in $folder_name"
 	fi
 
-	# WaybackURLs
+	# WaybackURLs----------------------------------------------------------
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting Wayback data";
 	cat $dir/1reconRanger/live-domains.txt | waybackurls >> $dir/1reconRanger/waybackdata.txt;
 
@@ -263,7 +263,7 @@ function endpoint_collection(){
 	if [ -e $dir/1reconRanger/waybackdata.txt ]; then
 		if [ -s $dir/1reconRanger/waybackdata.txt ]; then
 			var2=$(cat $dir/1reconRanger/waybackdata.txt | wc -l);
-			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var2 endpoints found from waybackurls & saved as > $folder_name/waybackdata.txt";
+			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var2 endpoints found from waybackurls & saved as > $folder_name/1reconRanger/waybackdata.txt";
 		else
 			echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No endpoints found from waybackurls";
 			rm $dir/1reconRanger/waybackdata.txt;
@@ -272,7 +272,7 @@ function endpoint_collection(){
 		echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} Unable to create 'waybackdata.txt' file in $folder_name"
 	fi
 
-	# Gau
+	# Gau-------------------------------------------------------------------
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting Gau data"
 	cat $dir/1reconRanger/live-domains.txt | gau >> $dir/1reconRanger/gau.txt;
 
@@ -280,7 +280,7 @@ function endpoint_collection(){
 	if [ -e $dir/1reconRanger/gau.txt ]; then
 		if [ -s $dir/1reconRanger/gau.txt ]; then
 			var3=$(cat $dir/1reconRanger/gau.txt | wc -l);
-			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var3 endpoints found from Gau & saved as > $folder_name/gau.txt";
+			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var3 endpoints found from Gau & saved as > $folder_name/1reconRanger/gau.txt";
 		else
 			echo -e "${YELLOW}[$(date "+%H:%M:%S")] No endpoint found from Gau${ENDCOLOR}";
 			rm $dir/1reconRanger/gau.txt;
@@ -289,15 +289,16 @@ function endpoint_collection(){
 		echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} Unable to create 'gau.txt' file in $folder_name"
 	fi
 
-	# Merge
+	# Merge-------------------------------------------------------------------
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Merging waybackurls & gau data for further crawling"
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Also checking live endpoints"
 	cat $dir/1reconRanger/waybackdata.txt $dir/1reconRanger/gau.txt 2>/dev/null | anti-burl | awk '{print $4}' | anew -q $dir/1reconRanger/waybackurls-gau-combined.txt;
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Merged live URLs as waybackurls-gau-combined.txt"
-	rm $dir/1reconRanger/waybackdata.txt $dir/1reconRanger/gau.txt 2>/dev/null;
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} waybackdata.txt & gau.txt deleted"
+	cat $dir/1reconRanger/waybackdata.txt $dir/1reconRanger/gau.txt | anew -q $dir/1reconRanger/all-endpoints.txt;
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} waybackdata.txt & gau.txt combined as all-endpoints.txt"
+	rm $dir/1reconRanger/waybackdata.txt $dir/1reconRanger/gau.txt;
 
-	# Archived crawl
+	# Archived crawl----------------------------------------------------------
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Crawling live archived urls"
 	cat $dir/1reconRanger/waybackurls-gau-combined.txt | hakrawler -insecure -subs -t 20 -u >> $dir/1reconRanger/crawled-archived-urls.txt;
 
@@ -305,7 +306,7 @@ function endpoint_collection(){
 	if [ -e $dir/1reconRanger/crawled-archived-urls.txt ]; then
 		if [ -s $dir/1reconRanger/crawled-archived-urls.txt ]; then
 			var4=$(cat $dir/1reconRanger/crawled-archived-urls.txt | wc -l);
-			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var4 links found from crawling archived urls & saved as > $folder_name/crawled-archived-urls.txt";
+			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var4 links found from crawling archived urls & saved as > $folder_name/1reconRanger/crawled-archived-urls.txt";
 		else
 			echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} No link found from crawling archived urls";
 			rm $dir/1reconRanger/crawled-archived-urls.txt;
@@ -322,7 +323,7 @@ function endpoint_collection(){
 	if [ -e $dir/1reconRanger/all-endpoints.txt ]; then
 		if [ -s $dir/1reconRanger/all-endpoints.txt ]; then
 			var5=$(cat $dir/1reconRanger/all-endpoints.txt | wc -l);
-			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var5 links combined total & saved as > $folder_name/all-endpoints.txt";
+			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var5 links combined total & saved as > $folder_name/1reconRanger/all-endpoints.txt";
 			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Deleting ${GREEN}waybackdata-gau-combined.txt, crawled-urls.txt & crawled-archived-urls.txt${ENDCOLOR}";
 			rm $dir/1reconRanger/crawled-urls.txt $dir/1reconRanger/waybackurls-gau-combined.txt $dir/1reconRanger/crawled-archived-urls.txt;
 			
@@ -333,8 +334,7 @@ function endpoint_collection(){
 				if [ -e $dir/1reconRanger/endpoints.txt ]; then
 					if [ -s $dir/1reconRanger/endpoints.txt ]; then
 						var6=$(cat $dir/1reconRanger/endpoints.txt | wc -l);
-						echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var6 final endpoints found & saved as > $folder_name/endpoints.txt";
-						rm $dir/1reconRanger/all-endpoints.txt;
+						echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var6 final endpoints found & saved as > $folder_name/1reconRanger/endpoints.txt";
 					else
 						echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} 0 endpoint found with ^http[s]";
 						echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} verify at $dir/1reconRanger/all-endpoints.txt";
@@ -351,60 +351,115 @@ function endpoint_collection(){
 		echo -e "${YELLOW}[$(date "+%H:%M:%S")]${ENDCOLOR} Unable to combine waybackdata, gau, crawled urls & domains";
 	fi
 
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} all-endpoints.txt all urls from wayback, gau, crawl, archive crawl";
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} This can be used to extract paths & parameters";
+
+
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	# Final: $dir/1reconRanger/endpoints.txt
 }
-#endpoint_collection
+endpoint_collection
 
 function portscan(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} PortScanning in progress!"
 	#echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} This may take time as nmap is also detecting running services"
 	for domain in $(<$dir/1reconRanger/all-domains.txt); do (echo $domain | naabu -host $domain -passive -silent -scan-all-ips | anew -q $dir/1reconRanger/openports.txt); done;
 	var=$(cat $dir/1reconRanger/openports.txt | wc -l); var2=$(cat $dir/1reconRanger/all-domains.txt | wc -l);
-	echo -e "${RED}[$(date "+%H:%M:%S")] $var ports are open for $var2 domains & saved as ${GREEN}$folder_name/openports.txt${ENDCOLOR}"
+	echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var ports are open for $var2 domains & saved as > $folder_name/1reconRanger/openports.txt${ENDCOLOR}"
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 
 	# Final: $dir/1reconRanger/openports.txt
 }
-#portscan
+portscan
 
-function domain_titles(){
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting (sub)?domain[s]? title"
-	cat $dir/1reconRanger/live-domains.txt | httpx -silent | ./get-title | anew -q $dir/1reconRanger/domain-titles.txt;
-	var=$(cat $dir/1reconRanger/domain-titles.txt | wc -l)
-	echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var domains title grabbed & saved as > $folder_name/domain-titles.txt${ENDCOLOR}"
-	
-	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
-	#Final: domain-titles.txt
-}
-#domain_titles
+function critical_ports(){
+	# Read the file containing the list of domains and ports
+	while IFS= read -r line; do
+	    # Use grep to match the regex patterns
+	    if echo "$line" | grep -qE ':445$'; then
+	        echo -e "${YELLOW}[$(date "+%H:%M:%S")] SMB port 445 open at : $line${ENDCOLOR}";
+	        echo "$line" | anew "$dir/1reconRanger/critical_ports.txt" > /dev/null
+	        echo -e "${YELLOW}           Check for possible attack vectors at 1.3 of https://t.ly/oJCMl${ENDCOLOR}";
+	        echo -e "${YELLOW}           Eg: bruteforcing credentials ${ENDCOLOR}"
+	    elif echo "$line" | grep -qE ':21$'; then
+	        echo -e "${YELLOW}[$(date "+%H:%M:%S")] FTP port 21 open at : $line${ENDCOLOR}";
+	        echo "$line" | anew "$dir/1reconRanger/critical_ports.txt" > /dev/null
+	        echo -e "${YELLOW}           Check for possible attack vectors at 1.3 of https://t.ly/oJCMl${ENDCOLOR}";
+	        echo -e "${YELLOW}           Eg: anonymous login or bruteforcing credentials ${ENDCOLOR}"
+	    elif echo "$line" | grep -qE ':22$'; then
+	        echo -e "${YELLOW}[$(date "+%H:%M:%S")] SSH port 22 open at : $line${ENDCOLOR}";
+	        echo "$line" | anew "$dir/1reconRanger/critical_ports.txt" > /dev/null
+	        echo -e "${YELLOW}           Check for possible attack vectors at 1.3 of https://t.ly/oJCMl${ENDCOLOR}";
+	        echo -e "${YELLOW}           Eg: bruteforcing credentials ${ENDCOLOR}"
+	    elif echo "$line" | grep -qE ':1433$'; then
+	        echo -e "${YELLOW}[$(date "+%H:%M:%S")] MSSQL port 1433 open at : $line${ENDCOLOR}";
+	        echo "$line" | anew "$dir/1reconRanger/critical_ports.txt" > /dev/null
+	        echo -e "${YELLOW}           Check for possible attack vectors at 1.3 of https://t.ly/oJCMl${ENDCOLOR}";
+	        echo -e "${YELLOW}           Eg: anonymous login or bruteforcing credentials${ENDCOLOR}"
+			elif echo "$line" | grep -qE ':23$'; then
+				  echo -e "${YELLOW}[$(date "+%H:%M:%S")] Telnet port 23 open at : $line${ENDCOLOR}";
+				  echo "$line" | anew "$dir/1reconRanger/critical_ports.txt" > /dev/null
+				   echo -e "${YELLOW}           Check for unencrypted telnet server${ENDCOLOR}";
+			elif echo "$line" | grep -qE ':25$'; then
+				  echo -e "${YELLOW}[$(date "+%H:%M:%S")] SMPT port 23 open at : $line${ENDCOLOR}";
+				  echo "$line" | anew "$dir/1reconRanger/critical_ports.txt" > /dev/null;
+				  echo -e "${YELLOW}           Eg: bruteforcing credentials ${ENDCOLOR}"
+	    elif echo "$line" | grep -qE ':3306$'; then
+	        echo -e "${YELLOW}[$(date "+%H:%M:%S")] MySQL port 1433 open at : $line${ENDCOLOR}";
+	        echo "$line" | anew "$dir/1reconRanger/critical_ports.txt" > /dev/null
+	    fi
+	done < $dir/1reconRanger/openports.txt
 
-function endpoint_titles(){
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting endpoints title"
-	if [ -e "$dir/1reconRanger/endpoints.txt" ]; then
-	cat $dir/1reconRanger/endpoints.txt | ./get-title | anew -q $dir/1reconRanger/endpoint-titles.txt;
-	var=$(cat $dir/1reconRanger/endpoint-titles.txt | wc -l)
-	echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var endpoints title grabbed & saved as > $folder_name/endpoint-titles.txt ${ENDCOLOR}"
-	else
-	echo -e "${RED}[$(date "+%H:%M:%S")] No \"endpoints.txt\" file found, so skipping${ENDCOLOR}";
+	if [ -e "$dir/1reconRanger/critical_ports.txt" ]; then
+  	  count=$(cat "$dir/1reconRanger/critical_ports.txt" | wc -l)
+  	if ((count >= 1)); then
+			echo -e "${YELLOW}[$(date "+%H:%M:%S")] $count critical ports found & saved as > $folder_name/1reconRanger/critical_ports.txt${ENDCOLOR}"
+			echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+		fi
 	fi
-	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+
+
+	#Final: critical_ports.txt
 }
-#endpoint_titles
+critical_ports
 
 function open_ports_title(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting open ports title"
 	if [ -e "$dir/1reconRanger/openports.txt" ]; then
 	cat $dir/1reconRanger/openports.txt | httpx -silent | ./get-title | anew -q $dir/1reconRanger/open_ports_title.txt;
 	var=$(cat $dir/1reconRanger/open_ports_title.txt | wc -l)
-	echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var titles grabbed for open ports domain & saved as $folder_name/open_ports_title.txt${ENDCOLOR}"
+	echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var titles grabbed for open ports domain & saved as $folder_name/1reconRanger/open_ports_title.txt${ENDCOLOR}"
 	else
 	echo -e "${YELLOW}[$(date "+%H:%M:%S")] No $folder_name/openports.txt file found, so skipping${ENDCOLOR}";
 	fi
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	#Final: open_ports_title.txt
 }
-#open_ports_title
+open_ports_title
+
+function domain_titles(){
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting (sub)?domain[s]? title"
+	cat $dir/1reconRanger/live-domains.txt | httpx -silent | ./get-title | anew -q $dir/1reconRanger/domain-titles.txt;
+	var=$(cat $dir/1reconRanger/domain-titles.txt | wc -l)
+	echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var domains title grabbed & saved as > $folder_name/1reconRanger/domain-titles.txt${ENDCOLOR}"
+	
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	#Final: domain-titles.txt
+}
+domain_titles
+
+function endpoint_titles(){
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Collecting endpoints title"
+	if [ -e "$dir/1reconRanger/endpoints.txt" ]; then
+	cat $dir/1reconRanger/endpoints.txt | ./get-title | anew -q $dir/1reconRanger/endpoint-titles.txt;
+	var=$(cat $dir/1reconRanger/endpoint-titles.txt | wc -l)
+	echo -e "${YELLOW}[$(date "+%H:%M:%S")] $var endpoints title grabbed & saved as > $folder_name/1reconRanger/endpoint-titles.txt ${ENDCOLOR}"
+	else
+	echo -e "${RED}[$(date "+%H:%M:%S")] No \"endpoints.txt\" file found, so skipping${ENDCOLOR}";
+	fi
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+}
+endpoint_titles
 
 function getjs(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Downloading JS files from domains and endpoints";
@@ -484,43 +539,60 @@ function getjs(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	#Final: 1js.txt
 }
-#getjs
+getjs
 
 function filefinder(){
 	mkdir -p $dir/1reconRanger/imp_files_list; imp_files_list="$dir/1reconRanger/imp_files_list";
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Extracting important files from endpoints.txt";
 
-	#JS
-	if [ $(cat $dir/1reconRanger/endpoints.txt | grep '.*\.\(js\|mjs\|jsx\|ts\|vue\|coffee\|es6\|jsp\).*' | wc -l) -gt 0 ]; then
-	    cat $dir/1reconRanger/endpoints.txt | grep '.*\.\(js\|mjs\|jsx\|ts\|vue\|coffee\|es6\|jsp\).*' | anew -q $imp_files_list/JSfiles.txt
-	    var=$(cat $imp_files_list/JSfiles.txt | wc -l); echo -e "${RED}[$(date "+%H:%M:%S")] $var JS files found & saved to ${GREEN}$folder_name/imp_files_list/JSfiles.txt${ENDCOLOR}";
-	fi
+	if [ -e $dir/1reconRanger/endpoints.txt ]; then
+		if [ -s $dir/1reconRanger/endpoints.txt ]; then
+			#JS
+			if [ $(cat $dir/1reconRanger/endpoints.txt | grep '.*\.\(js\|mjs\|jsx\|ts\|vue\|coffee\|es6\|jsp\).*' | wc -l) -gt 0 ]; then
+			    cat $dir/1reconRanger/endpoints.txt | grep '.*\.\(js\|mjs\|jsx\|ts\|vue\|coffee\|es6\|jsp\).*' | anew -q $imp_files_list/JSfiles.txt
+			    var=$(cat $imp_files_list/JSfiles.txt | wc -l); echo -e "${RED}[$(date "+%H:%M:%S")] $var JS files found & saved to ${GREEN}$folder_name/imp_files_list/JSfiles.txt${ENDCOLOR}";
+			fi
 
-	#Sensitive
-	if [ $(cat $dir/1reconRanger/endpoints.txt | grep '.*\.\(back\|backup\|bak\|bakup\|conf\|mdb\|db\|doc\|ini\|rar\|source\|zip\|bac\|sql\|cache\|csproj\|err\|java\|log\|tar\|tar.gz\|tmp\|vb\|git\|xls\|cfg\|swp\|old\|php\|php5\|php7\|config\|cnf\|py\|action\|do\|docx\|yaml\|yml\|class\|md\|access_log\|allow\|bash_config\|bash_history\|bash_logout\|bashrc\|BeforeVMwareToolsInstall\|chroot_list\|conf-vesa\|conf-vmware\|crit\|default\|defs\|deny\|dpkg-old\|error_log\|htaccess\|httpd\|include\|info\|ksh_history\|legacy\|lighttpdpassword\|log1\|log2\|lst\|master\|new\|nmbd\|notice\|options\|orig\|out\|passwd\|pdb\|pl\|properties\|rules\|smb\|smbd\|user\|users\|warn\|Xauthority\|xferlog\).*' | wc -l) -gt 0 ]; then
-	    cat $dir/1reconRanger/endpoints.txt | grep '.*\.\(back\|backup\|bak\|bakup\|conf\|mdb\|db\|doc\|ini\|rar\|source\|zip\|bac\|sql\|cache\|csproj\|err\|java\|log\|tar\|tar.gz\|tmp\|vb\|git\|xls\|cfg\|swp\|old\|php\|php5\|php7\|config\|cnf\|py\|action\|do\|docx\|yaml\|yml\|class\|md\|access_log\|allow\|bash_config\|bash_history\|bash_logout\|bashrc\|BeforeVMwareToolsInstall\|chroot_list\|conf-vesa\|conf-vmware\|crit\|default\|defs\|deny\|dpkg-old\|error_log\|htaccess\|httpd\|include\|info\|ksh_history\|legacy\|lighttpdpassword\|log1\|log2\|lst\|master\|new\|nmbd\|notice\|options\|orig\|out\|passwd\|pdb\|pl\|properties\|rules\|smb\|smbd\|user\|users\|warn\|Xauthority\|xferlog\).*' | anew -q $imp_files_list/sensitivefiles.txt
-	    var=$(cat $imp_files_list/sensitivefiles.txt | wc -l); echo -e "${RED}[$(date "+%H:%M:%S")]${ENDCOLOR} $var Sensitive files found & saved to ${GREEN}$folder_name/imp_files_list/sensitivefiles.txt${ENDCOLOR}";
+			#Sensitive
+			if [ $(cat $dir/1reconRanger/endpoints.txt | grep '.*\.\(back\|backup\|bak\|bakup\|conf\|mdb\|db\|doc\|ini\|rar\|source\|zip\|bac\|sql\|cache\|csproj\|err\|java\|log\|tar\|tar.gz\|tmp\|vb\|git\|xls\|cfg\|swp\|old\|php\|php5\|php7\|config\|cnf\|py\|action\|do\|docx\|yaml\|yml\|class\|md\|access_log\|allow\|bash_config\|bash_history\|bash_logout\|bashrc\|BeforeVMwareToolsInstall\|chroot_list\|conf-vesa\|conf-vmware\|crit\|default\|defs\|deny\|dpkg-old\|error_log\|htaccess\|httpd\|include\|info\|ksh_history\|legacy\|lighttpdpassword\|log1\|log2\|lst\|master\|new\|nmbd\|notice\|options\|orig\|out\|passwd\|pdb\|pl\|properties\|rules\|smb\|smbd\|user\|users\|warn\|Xauthority\|xferlog\).*' | wc -l) -gt 0 ]; then
+			    cat $dir/1reconRanger/endpoints.txt | grep '.*\.\(back\|backup\|bak\|bakup\|conf\|mdb\|db\|doc\|ini\|rar\|source\|zip\|bac\|sql\|cache\|csproj\|err\|java\|log\|tar\|tar.gz\|tmp\|vb\|git\|xls\|cfg\|swp\|old\|php\|php5\|php7\|config\|cnf\|py\|action\|do\|docx\|yaml\|yml\|class\|md\|access_log\|allow\|bash_config\|bash_history\|bash_logout\|bashrc\|BeforeVMwareToolsInstall\|chroot_list\|conf-vesa\|conf-vmware\|crit\|default\|defs\|deny\|dpkg-old\|error_log\|htaccess\|httpd\|include\|info\|ksh_history\|legacy\|lighttpdpassword\|log1\|log2\|lst\|master\|new\|nmbd\|notice\|options\|orig\|out\|passwd\|pdb\|pl\|properties\|rules\|smb\|smbd\|user\|users\|warn\|Xauthority\|xferlog\).*' | anew -q $imp_files_list/sensitivefiles.txt
+			    var=$(cat $imp_files_list/sensitivefiles.txt | wc -l); echo -e "${RED}[$(date "+%H:%M:%S")]${ENDCOLOR} $var Sensitive files found & saved to ${GREEN}$folder_name/imp_files_list/sensitivefiles.txt${ENDCOLOR}";
+			fi
+		else
+			echo -e "${YELLOW}[$(date "+%H:%M:%S")] 'endpoints.txt' is empty hence deleting ${ENDCOLOR}";
+			rm $dir/1reconRanger/endpoints.txt;
+		fi
+	else
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")] No 'endpoints.txt' found in $folder_name ${ENDCOLOR}";
 	fi
 
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	#Final: sensitivefiles.txt, JSfiles.txt
 }
-#filefinder
+filefinder
 
 function expand_paths(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Expanding URLs paths";
 	if [ -e "$dir/1reconRanger/endpoints.txt" ] && [ -s "$dir/1reconRanger/endpoints.txt" ] ; then
 		var=$(cat $dir/1reconRanger/endpoints.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var URLs found in endpoints.txt";
 		for url in $(<$dir/1reconRanger/endpoints.txt); do (echo $url | ./sprawl.py | grep -vE '^(|\.)$' | anew -q $dir/1reconRanger/expanded_paths.txt); done
-		var2=$(cat $dir/1reconRanger/expanded_paths.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Expanded into $var2 paths > $folder_name/expanded_paths.txt";
 	else
 		echo -e "${YELLOW}[$(date "+%H:%M:%S")] Either 'endpoints.txt' is missing or the file is empty${ENDCOLOR}";
 	fi
 
+	if [ -e "$dir/1reconRanger/all-endpoints.txt" ] && [ -s "$dir/1reconRanger/all-endpoints.txt" ] ; then
+		var2=$(cat $dir/1reconRanger/all-endpoints.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $var2 URLs found in all-endpoints.txt";
+		for url in $(<$dir/1reconRanger/all-endpoints.txt); do (echo $url | ./sprawl.py | grep -vE '^(|\.)$' | anew -q $dir/1reconRanger/expanded_paths.txt); done
+	else
+		echo -e "${YELLOW}[$(date "+%H:%M:%S")] Either 'endpoints.txt' is missing or the file is empty${ENDCOLOR}";
+	fi
+
+	var3=$(cat $dir/1reconRanger/expanded_paths.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Expanded into $var3 paths > $folder_name/expanded_paths.txt";
+
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	#Final: expanded_paths.txt
 }
-#expand_paths
+expand_paths
 
 function parameters(){
 	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Extracting parameters from endpoints.txt";
@@ -530,7 +602,7 @@ function parameters(){
 		cat $dir/1reconRanger/endpoints.txt | unfurl keys | anew -q $dir/1reconRanger/parameters.txt;
 		if [ -e $dir/1reconRanger/parameters.txt ]; then
 			if [ -s $dir/1reconRanger/parameters.txt ]; then
-				param_count=$(cat $dir/1reconRanger/parameters.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $param_count parameters extracted from endpoints & saved as > $folder_name/parameters.txt";
+				param_count=$(cat $dir/1reconRanger/parameters.txt | wc -l); echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $param_count parameters extracted from endpoints & saved as > $folder_name/1reconRanger/parameters.txt";
 			else
 				echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No parameter found in endpoints";
 				rm $dir/1reconRanger/parameters.txt
@@ -546,7 +618,7 @@ function parameters(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	#Final: parameters.txt
 }
-#parameters
+parameters
 
 function more_domains(){
 		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Discovering new domains using CSP";
@@ -557,7 +629,7 @@ function more_domains(){
 
 			if [ -s $output1/more_domains.txt ]; then
 				count=$(cat $output1/more_domains.txt | wc -l);
-				echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $count new associated domains found for $folder_name & Saved as > 1-rR/more_domains.txt";
+				echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} $count new associated domains found for $folder_name & Saved as > $folder_name/1reconRanger/more_domains.txt";
 				echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} These can be used for second order STO or finding new bugs or bruteforcing files/directories if everything is in scope!";
 			else
 				echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No new domain found using CSP";
@@ -571,17 +643,17 @@ function more_domains(){
 	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
 	#Final: more_domains.txt
 }
-#more_domains
+more_domains
 
 function reflected_parameters(){
-	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Finding reflected parameters for XSS";
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} FINDING REFLECTED PARAMETERS FOR XSS";
 	cat $output1/endpoints.txt | qsreplace abcd1234 | reflector | anew -q $output1/reflected.txt;
 
 	if [ -e $output1/reflected.txt ]; then
 		if [ -s $output1/reflected.txt ]; then
 			count=$(cat $output1/reflected.txt | wc -l);
 			if [ $count -gt 0 ] ; then
-				echo -e "${GREEN}[$(date "+%H:%M:%S")] $count reflected parameters found & Saved as > 1-rR/reflected.txt ${ENDCOLOR}";
+				echo -e "${GREEN}[$(date "+%H:%M:%S")] $count reflected parameters found & Saved as > $folder_name/1reconRanger/reflected.txt ${ENDCOLOR}";
 			else
 				echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No reflected parameters found";
 				rm $output1/reflected.txt;
@@ -593,5 +665,29 @@ function reflected_parameters(){
 	else
 			echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No reflected parameters found";
 	fi
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	#Final: reflected.txt
 }
-#reflected_parameters
+reflected_parameters
+
+function zone_transfer(){
+	echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} CHECKING FOR MISCONFIGURED DNS ZONE TRANSFER ON ALL DOMAINS!";
+	
+	# Loop through each domain in the list and check for zone transfer issues
+	while IFS= read -r domain; do
+	  echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} Checking $domain"
+	  dnsrecon -t axfr -d "$domain" >> "$dir/1reconRanger/zone_transfer.txt"
+	done < "$dir/1reconRanger/all-domains.txt"
+
+	# Checking if anything found
+	count=$(grep -c "Zone Transfer was successful" "$dir/1reconRanger/zone_transfer.txt")
+	if ((count >= 1)); then
+		echo -e "${RED}[$(date "+%H:%M:%S")] $count nameservers have misconfigured DNS zone transfer & saved as > $folder_name/1reconRanger/zone_transfer.txt${ENDCOLOR}"
+	else
+		echo -e "${GREEN}[$(date "+%H:%M:%S")]${ENDCOLOR} No misconfigured zone transfer domain found"
+		rm $dir/1reconRanger/zone_transfer.txt;
+	fi
+	echo -e "${GREEN}-------------------------------------------------${ENDCOLOR}";
+	#Final: reflected.txt
+}
+zone_transfer
